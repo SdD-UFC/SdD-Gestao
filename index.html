@@ -49,7 +49,7 @@ main.wrap{padding-top:28px;padding-bottom:64px}
 .vh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
 .vh h2{margin:0;font-family:var(--serif);font-size:clamp(24px,3.2vw,34px);line-height:1.1;font-weight:700;text-wrap:balance}
 .vh p{margin:4px 0 0;color:var(--mute)}
-.btn{display:inline-flex;align-items:center;gap:6px;min-height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-weight:600;font-size:15px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-weight:600;font-size:15px}
 .btn:hover{background:var(--panel)}
 .btn.pri{background:var(--pri-bg);color:var(--pri-fg);border-color:var(--pri-bg)}
 .btn.pri:hover{filter:brightness(1.12)}
@@ -713,21 +713,44 @@ view.addEventListener('submit',async e=>{if(e.target.id!=='addm')return;e.preven
 
 /* ---------- conexão ---------- */
 function setSync(t){$('#sync').textContent=t}
-function loginScreen(msg){
+let CREATING=false;
+const isIOSApp=()=>navigator.standalone===true||((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)&&/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
+function loginScreen(msg,ok){
   document.body.classList.remove('ro');$('#tabs').style.display='none';$('#who').textContent='';setSync('');$('#note').innerHTML='';
-  view.innerHTML=`<div style="max-width:440px;margin:6vh auto;text-align:center;display:grid;gap:16px;justify-items:center"><h2 style="font-family:var(--serif);font-size:30px;margin:0">Painel da SdDUFC</h2><p class="muted" style="margin:0">Entre com a sua conta Google. A diretoria vê o painel completo; cada membro vê a própria área.</p>${msg?`<div class="banner" style="margin:0">${esc(msg)}</div>`:''}<button class="btn pri" id="login" style="min-height:48px;padding:0 22px">Entrar com Google</button></div>`;
-  $('#login').onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});const standalone=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
-    if(standalone){firebase.auth().signInWithRedirect(prov);return}
-    try{await firebase.auth().signInWithPopup(prov)}catch(err){if(err&&['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].includes(err.code)){firebase.auth().signInWithRedirect(prov)}else if(err&&err.code!=='auth/popup-closed-by-user'&&err.code!=='auth/cancelled-popup-request'){loginScreen('Não foi possível entrar: '+(err.message||err.code))}}};
+  const ios=isIOSApp();
+  const google=`<button class="btn pri" id="login" style="min-height:48px;padding:0 22px;width:100%">Entrar com Google</button>`;
+  const form=`<form id="pwform" style="display:grid;gap:10px;width:100%;text-align:left" novalidate>
+    <label class="f">E-mail<input type="email" id="pw-mail" autocomplete="username" inputmode="email" placeholder="seu e-mail cadastrado na SdD"></label>
+    <label class="f">Senha<input type="password" id="pw-pass" autocomplete="current-password" placeholder="mínimo 6 caracteres"></label>
+    <button class="btn ${ios?'pri':''}" id="pw-in" style="min-height:46px">Entrar com e-mail e senha</button>
+    <button type="button" class="btn ghost" id="pw-new" style="min-height:40px">Primeiro acesso ou esqueci a senha</button></form>`;
+  view.innerHTML=`<div style="max-width:400px;margin:5vh auto;text-align:center;display:grid;gap:16px;justify-items:center"><h2 style="font-family:var(--serif);font-size:30px;margin:0">Painel da SdDUFC</h2>
+  <p class="muted" style="margin:0">${ios?'No app do iPhone, entre com o seu e-mail e uma senha.':'Entre com a sua conta Google ou com e-mail e senha.'}</p>
+  ${msg?`<div class="banner" style="margin:0;text-align:left;${ok?'background:color-mix(in srgb,var(--ok) 14%,var(--bg));border-color:color-mix(in srgb,var(--ok) 40%,var(--bg))':''}">${esc(msg)}</div>`:''}
+  ${ios?form:google+'<div class="muted" style="font-size:14px">ou</div>'+form}
+  ${ios?'<p class="muted" style="font-size:13px;margin:0">O login com Google não funciona em apps da tela inicial do iPhone. Prefere Google? Abra o site direto no Safari.</p>':''}</div>`;
+  const A=firebase.auth();
+  const g=$('#login');if(g)g.onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
+    try{await A.signInWithPopup(prov)}catch(err){if(err&&['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].includes(err.code)){A.signInWithRedirect(prov)}else if(err&&err.code!=='auth/popup-closed-by-user'&&err.code!=='auth/cancelled-popup-request'){loginScreen('Não foi possível entrar: '+(err.message||err.code))}}};
+  const mail=()=>($('#pw-mail').value||'').trim().toLowerCase(),pass=()=>$('#pw-pass').value||'';
+  $('#pwform').onsubmit=async e=>{e.preventDefault();const m=mail(),p=pass();if(!okMail(m)||!p){loginScreen('Preencha e-mail e senha.');return}
+    try{await A.signInWithEmailAndPassword(m,p)}catch(err){const c=err&&err.code;
+      loginScreen(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-login-credentials'].includes(c)?'E-mail ou senha incorretos. Se é seu primeiro acesso, toque em "Primeiro acesso ou esqueci a senha".':c==='auth/too-many-requests'?'Muitas tentativas. Espere alguns minutos e tente de novo.':c==='auth/operation-not-allowed'?'O login por e-mail ainda não foi ativado no Firebase. Avise a diretoria.':'Não foi possível entrar: '+(err.message||c));const i=$('#pw-mail');if(i)i.value=m}};
+  $('#pw-new').onclick=async()=>{const m=mail(),p=pass();if(!okMail(m)){loginScreen('Digite o seu e-mail no campo acima e toque de novo.');return}
+    if(p.length>=6){CREATING=true;try{const cred=await A.createUserWithEmailAndPassword(m,p);await cred.user.sendEmailVerification();await A.signOut();CREATING=false;loginScreen('Conta criada. Enviamos um link de confirmação para '+m+'. Abra o e-mail, toque no link e depois volte aqui para entrar com a senha que você escolheu.',true);return}
+      catch(err){CREATING=false;if(!(err&&err.code==='auth/email-already-in-use')){loginScreen(err&&err.code==='auth/operation-not-allowed'?'O login por e-mail ainda não foi ativado no Firebase. Avise a diretoria.':'Não foi possível criar a senha: '+(err.message||err.code));return}}}
+    try{await A.sendPasswordResetEmail(m);loginScreen('Enviamos para '+m+' um link para criar ou trocar a senha. Abra o e-mail, defina a senha e volte aqui para entrar. Olhe também o spam.',true)}
+    catch(err){loginScreen(p.length<6?'Para o primeiro acesso, digite também a senha que você quer usar (mínimo 6 caracteres) e toque de novo.':'Não foi possível enviar o e-mail: '+(err.message||err.code))}};
 }
 let UNSUB=[];
 async function boot(){
   const cfg=window.SDD_CONFIG&&window.SDD_CONFIG.firebase;
   if(!window.firebase||!cfg||!cfg.apiKey||/COLE/.test(cfg.apiKey)){$('#tabs').style.display='none';view.innerHTML='<div class="empty" style="margin-top:40px">O Firebase ainda não foi configurado. Preencha o arquivo firebase-config.js seguindo o LEIAME.</div>';setSync('');return}
-  firebase.initializeApp(cfg);db=firebase.firestore();firebase.auth().getRedirectResult().catch(err=>{if(err&&err.code)loginScreen('Não foi possível entrar: '+(err.message||err.code))});
+  firebase.initializeApp(cfg);db=firebase.firestore();try{firebase.auth().getRedirectResult().catch(err=>{if(err&&err.code)loginScreen('Não foi possível entrar: '+(err.message||err.code))})}catch(e){}
   firebase.auth().onAuthStateChanged(async user=>{
     UNSUB.forEach(f=>{try{f()}catch(e){}});UNSUB=[];COLS.forEach(c=>S[c]=[]);MYAREA=undefined;RO=false;CANEDIT=false;ADMIN=false;
     if(!user){loginScreen();return}
+    if(!user.emailVerified){if(CREATING)return;try{await user.sendEmailVerification()}catch(e){}const em=user.email;await firebase.auth().signOut();loginScreen('Falta confirmar o e-mail '+em+'. Mandamos um link de confirmação agora: abra o e-mail, toque no link e depois entre de novo.',true);return}
     ME=(user.email||'').toLowerCase();
     $('#tabs').style.display='';$('#who').innerHTML='';const out=document.createElement('button');out.className='btn sm ghost';out.style.color='#e9e6df';out.textContent='Sair ('+ME+')';out.onclick=()=>firebase.auth().signOut();$('#who').appendChild(out);
     let admin=ADMIN_EMAILS.includes(ME);
