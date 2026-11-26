@@ -592,19 +592,34 @@ function guessMember(tabName,pool){
 function splitCells(line){return (line.includes('\t')?line.split('\t'):line.split(/\s{2,}/)).map(x=>x.trim()).filter(x=>x!=='')}
 const isNum=x=>/^[=]?-?\d+([.,]\d+)?$/.test(String(x).trim());
 const toNum=x=>parseFloat(String(x).replace('=','').replace(',','.'));
+function tabRows(text){
+  const lines=String(text||'').split(/\r?\n/).map(x=>x.trim());
+  const tabbed=lines.filter(l=>l.includes('\t')||/\S\s{2,}\S/.test(l)).length;
+  if(tabbed>=3)return lines.map(splitCells).filter(c=>c.length>=2);
+  // Formato "uma célula por linha" (copiado do site do Tabbycat no celular ou em alguns navegadores)
+  const L=lines.filter(l=>l!=='');const rows=[];let cur=null;
+  for(let i=0;i<L.length;i++){const l=L[i],nx=L[i+1]||'';
+    if(/^=?\d+=?$/.test(l)&&/[A-Za-zÀ-ú]/.test(nx)&&!/^novice$/i.test(nx)){if(cur)rows.push(cur);cur=[l.replace(/=/g,'')];continue}
+    if(cur){if(/runs on Tabbycat/i.test(l)){rows.push(cur);cur=null;break}cur.push(l)}}
+  if(cur)rows.push(cur);return rows;
+}
 function parseTab(text,filtro,kind){
   const f=norm(filtro);let maxRank=0;const out=[];
-  String(text||'').split(/\r?\n/).forEach(line=>{
-    const cells=splitCells(line);if(cells.length<2)return;
-    const r=isNum(cells[0])?toNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<2000)maxRank=r;
+  tabRows(text).forEach(cells=>{
+    const line=cells.join(' ');
+    const r=isNum(cells[0])?toNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<5000)maxRank=r;
     if(f&&!norm(line).includes(f))return;
     let i=isNaN(r)?0:1;while(i<cells.length&&isNum(cells[i]))i++;
     const nome=cells[i]||'';if(!/[a-zA-ZÀ-ú]/.test(nome))return;
-    let j=i+1;while(j<cells.length&&isNum(cells[j]))j++;
-    const equipe=j<cells.length&&!isNum(cells[j])?cells[j]:'';
+    let j=i+1;while(j<cells.length&&(isNum(cells[j])||!/[a-zA-ZÀ-ú]/.test(cells[j])||/^novice$/i.test(cells[j])))j++;
+    const equipe=j<cells.length?cells[j]:'';
     const nums=cells.slice(i+1).filter(isNum).map(toNum);
-    if(kind==='oradores'){const sp=nums.filter(x=>x>=50&&x<=100);const media=sp.length?Math.round(sp.reduce((a,b)=>a+b,0)/sp.length*100)/100:null;out.push({nome,equipe,posicao:isNaN(r)?null:r,media,rodadas:Math.max(0,sp.length-(sp.length>2?1:0))})}
-    else{out.push({nome,posicao:isNaN(r)?null:r,pontos:nums.length?nums[0]:null,speaks:nums.length>1?nums[1]:null,fase:''})}
+    if(kind==='oradores'){
+      const ints=cells.slice(i+1).filter(c=>isNum(c)&&!/[.,]/.test(c)).map(toNum).filter(x=>x>=50&&x<=100);
+      const last=[...cells].reverse().find(c=>isNum(c)&&toNum(c)>=50&&toNum(c)<=100);
+      const media=last&&/[.,]/.test(last)?toNum(last):(ints.length?Math.round(ints.reduce((a,b)=>a+b,0)/ints.length*100)/100:null);
+      out.push({nome,equipe,posicao:isNaN(r)?null:r,media,rodadas:ints.length,novice:/\bnovice\b/i.test(line)});
+    }else{out.push({nome,posicao:isNaN(r)?null:r,pontos:nums.length?nums[0]:null,speaks:nums.length>1?nums[1]:null,fase:''})}
   });
   return {rows:out,max:maxRank};
 }
