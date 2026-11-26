@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel SdDUFC</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#222224">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SdDUFC">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+/* VOICE work: painel interno da diretoria, denso e ordenado
+   IDEA a ordem do dia de um parlamento: pauta, calendário de sessões, quadro de votação
+   PICTURE em cada aba, o próprio quadro de trabalho (listas, calendário, planilha, ranking)
+   COLOUR identidade da SdD: grafite #222224 e dourado #eab726 do brasão; vermelho só para alertas
+   TYPE Cinzel (serifa do brasão) nos títulos + Figtree no texto
+   LAYOUT faixa da marca com abas; abaixo, o quadro da aba ocupando a largura; no celular tudo empilha */
+:root{color-scheme:light dark;
+--brand:light-dark(#222224,#0e0e0f);--brand-ink:#eab726;--brand2:light-dark(#2f2f32,#1d1d20);--gold:light-dark(#9a7208,#eab726);
+--pri-bg:light-dark(#222224,#eab726);--pri-fg:light-dark(#eab726,#18181a);--chart:light-dark(#c99a12,#eab726);
+--acc:light-dark(#c8313f,#ff7a86);
+--bg:light-dark(#ffffff,#161618);--panel:light-dark(#f6f5f4,#1b1b1f);--ink:light-dark(#17171a,#ececef);--mute:light-dark(#5f5f68,#a4a4ae);--line:light-dark(#e3e1df,#2e2e35);
+--ok:light-dark(#1f8a5a,#5fd39a);--warn:light-dark(#b45309,#f5b04a);
+--d-academica:light-dark(#2f63c9,#7aa5ff);--d-debates:light-dark(#c8313f,#ff7a86);--d-comercial:light-dark(#1f8a5a,#5fd39a);--d-mkt:light-dark(#a33a86,#e889cf);
+--font:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;--serif:'Cinzel',Georgia,'Times New Roman',serif}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 var(--font);overflow-x:clip}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 max(16px,4vw)}
+header.top{background:var(--brand);color:var(--brand-ink)}
+.hrow{display:flex;align-items:center;gap:14px;padding-top:20px;padding-bottom:14px;flex-wrap:wrap}
+.mark{height:64px;width:auto;flex:none;display:block}
+.hrow h1{margin:0;font-family:var(--serif);font-size:clamp(21px,3vw,30px);line-height:1.1;font-weight:700;letter-spacing:.01em}
+.hrow p{margin:3px 0 0;color:#d6d3cc;font-size:14px}
+.sync{margin-left:auto;font-size:13px;color:#d6d3cc;white-space:nowrap}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs a{flex:none;color:#e9e6df;text-decoration:none;padding:12px 16px;border-radius:10px 10px 0 0;font-weight:600;font-size:15px;opacity:.85}
+nav.tabs a:hover{opacity:1;background:var(--brand2)}
+nav.tabs a[aria-current=page]{background:var(--bg);color:var(--ink);opacity:1}
+main.wrap{padding-top:28px;padding-bottom:64px}
+.vh{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.vh h2{margin:0;font-family:var(--serif);font-size:clamp(24px,3.2vw,34px);line-height:1.1;font-weight:700;text-wrap:balance}
+.vh p{margin:4px 0 0;color:var(--mute)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;font-weight:600;font-size:15px}
+.btn:hover{background:var(--panel)}
+.btn.pri{background:var(--pri-bg);color:var(--pri-fg);border-color:var(--pri-bg)}
+.btn.pri:hover{filter:brightness(1.12)}
+.btn.sm{min-height:34px;padding:0 10px;font-size:14px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--acc)}
+:focus-visible{outline:3px solid var(--chart);outline-offset:2px}
+input,select,textarea{font-size:16px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:8px 10px;min-height:40px}
+textarea{min-height:80px;resize:vertical;width:100%}
+label.f{display:grid;gap:4px;font-size:14px;font-weight:600}
+label.f>input,label.f>select,label.f>textarea{font-weight:400}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:6px 14px;min-height:36px;cursor:pointer;font-size:14px;font-weight:600}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tag{display:inline-block;font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:6px;color:#fff;background:var(--c,var(--mute));white-space:nowrap}
+.d-academica{--c:var(--d-academica)}.d-debates{--c:var(--d-debates)}.d-comercial{--c:var(--d-comercial)}.d-mkt{--c:var(--d-mkt)}
+.muted{color:var(--mute)}
+.nw{white-space:nowrap}
+.empty{padding:22px;border:1px dashed var(--line);border-radius:12px;color:var(--mute);text-align:center;font-size:15px}
+.banner{background:color-mix(in srgb,var(--warn) 14%,var(--bg));border:1px solid color-mix(in srgb,var(--warn) 40%,var(--bg));border-radius:10px;padding:10px 14px;font-size:14px;margin-bottom:16px}
+/* demandas */
+.dgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.dcard{text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:14px 16px;cursor:pointer;display:grid;gap:6px;border-top:5px solid var(--c)}
+.dcard[aria-pressed=true]{outline:2px solid var(--c);outline-offset:-1px}
+.dcard b{font-size:17px}
+.dnum{display:flex;gap:14px;font-size:14px;color:var(--mute);flex-wrap:wrap}
+.dnum strong{font-size:26px;color:var(--ink);font-weight:800;display:block;line-height:1}
+.meter{height:8px;border-radius:99px;background:var(--line);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--c)}
+.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.tools input[type=search]{flex:1 1 200px;max-width:320px}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px}
+.col h3{margin:0 0 10px;font-size:18px;display:flex;gap:8px;align-items:baseline}
+.col h3 span{color:var(--mute);font-weight:500;font-size:15px}
+.tlist{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:start;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--bg);border-left:5px solid var(--c)}
+.task.done{opacity:.72;background:var(--panel)}
+.task.done .ttl{text-decoration:line-through}
+.chk{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);background:var(--bg);cursor:pointer;display:grid;place-items:center;margin-top:1px}
+.chk svg{width:16px;height:16px;opacity:0}
+.task.done .chk{background:var(--ok);border-color:var(--ok);color:#fff}
+.task.done .chk svg{opacity:1}
+.chk:hover svg{opacity:.5}
+.ttl{background:none;border:0;padding:0;text-align:left;font-weight:600;font-size:16px;cursor:pointer}
+.ttl:hover{color:var(--acc)}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--mute);margin-top:4px}
+.late{color:var(--acc);font-weight:700}
+.prog{color:var(--warn);font-weight:700}
+.prio-alta .ttl::after{content:" • alta";color:var(--acc);font-size:13px;font-weight:700}
+/* calendario */
+.calbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.calbar h3{margin:0 8px;font-size:22px;min-width:9em}
+.calwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cal .wd{background:var(--panel);font-size:13px;font-weight:700;color:var(--mute);padding:8px;border-bottom:1px solid var(--line)}
+.day{min-height:104px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);padding:6px;cursor:pointer;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
+.day:nth-child(7n){border-right:0}
+.day.out{background:var(--panel);color:var(--mute)}
+.day.today .dn{background:var(--pri-bg);color:var(--pri-fg);border-radius:99px}
+.dn{font-size:13px;font-weight:700;width:24px;height:24px;display:grid;place-items:center}
+.ev{font-size:12.5px;line-height:1.25;padding:2px 6px;border-radius:5px;background:color-mix(in srgb,var(--c,var(--chart)) 18%,var(--bg));border-left:3px solid var(--c,var(--chart));overflow:hidden;white-space:nowrap;text-overflow:ellipsis;cursor:pointer;border-top:0;border-right:0;border-bottom:0;text-align:left;width:100%}
+.ev.camp{--c:var(--warn);font-weight:700}
+.more{font-size:12px;color:var(--mute)}
+.side h3{margin:0 0 10px;font-size:18px}
+.up{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.up li button{display:grid;grid-template-columns:3.6em minmax(0,1fr);gap:10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:9px 2px;cursor:pointer}
+.up .dt{font-weight:800;font-size:15px;line-height:1.1}
+.up .dt small{display:block;font-weight:600;color:var(--mute);font-size:12px}
+.up .nm{font-weight:600}
+.up .sub{display:block;font-size:13px;color:var(--mute)}
+.year{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.mcard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--bg)}
+.mcard.cur{border-color:var(--chart);box-shadow:inset 0 4px 0 var(--chart)}
+.mcard h4{margin:0 0 6px;font-size:16px;text-transform:capitalize}
+.mcard ul{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:14px}
+.mcard li{display:grid;grid-template-columns:3em minmax(0,1fr);gap:6px}
+.mcard li b{white-space:nowrap}
+/* planilha */
+.sumrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(11em,1fr));gap:12px;margin-bottom:16px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}
+.stat strong{display:block;font-size:clamp(24px,3vw,30px);font-weight:800;line-height:1.1;white-space:nowrap}
+.stat span{font-size:14px;color:var(--mute)}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.sheet{border-collapse:collapse;width:max-content;min-width:100%;font-size:14px}
+.sheet th{position:sticky;top:0;background:var(--panel);text-align:left;font-size:13px;font-weight:700;color:var(--mute);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.sheet td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:0}
+.sheet td:last-child{border-right:0}
+.sheet tr:last-child td{border-bottom:0}
+.sheet input,.sheet select{border:0;border-radius:0;background:transparent;min-height:40px;padding:6px 8px;width:100%;font-size:14px}
+.sheet input:focus,.sheet select:focus{background:color-mix(in srgb,var(--chart) 10%,var(--bg));outline:2px solid var(--chart);outline-offset:-2px}
+.sheet td.rn{padding:0 8px;color:var(--mute);font-size:12px;text-align:right;background:var(--panel)}
+.sheet tr.st-conf td.rn{box-shadow:inset 4px 0 var(--ok)}
+.sheet tr.st-insc td.rn{box-shadow:inset 4px 0 var(--d-academica)}
+.sheet tr.st-abertas td.rn{box-shadow:inset 4px 0 var(--warn)}
+.sheet tr.st-fim td{color:var(--mute)}
+.sheet tr.st-nao td{color:var(--mute);text-decoration:line-through}
+.sheet tr.alert td.prz input{color:var(--acc);font-weight:700}
+/* desempenho */
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:end}
+.filters label.f{min-width:150px}
+.grid2{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:20px;margin-bottom:24px}
+.panel{border:1px solid var(--line);border-radius:14px;padding:16px;background:var(--bg)}
+.panel h3{margin:0 0 4px;font-size:18px}
+.panel .cap{margin:0 0 12px;color:var(--mute);font-size:14px}
+.bars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;align-items:end;height:200px;padding-top:20px}
+.bar{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px}
+.bar i{display:block;width:100%;max-width:38px;background:var(--chart);border-radius:6px 6px 0 0;min-height:2px}
+.bar.cur i{background:var(--ink)}
+.bar b{font-size:12.5px;font-weight:700}
+.bar span{font-size:12px;color:var(--mute)}
+.hb{display:grid;grid-template-columns:3em minmax(0,1fr) 3.4em;gap:10px;align-items:center;margin-bottom:10px;font-size:14px}
+.hb .tr{height:22px;background:var(--panel);border-radius:6px;overflow:hidden}
+.hb .tr i{display:block;height:100%;background:var(--chart)}
+.hb b{text-align:right;font-variant-numeric:tabular-nums}
+table.rank{border-collapse:collapse;width:100%;font-size:14.5px}
+.rank th{text-align:left;font-size:13px;color:var(--mute);font-weight:700;padding:8px;border-bottom:2px solid var(--line);white-space:nowrap}
+.rank th button{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+.rank th button[aria-sort]{color:var(--ink)}
+.rank td{padding:9px 8px;border-bottom:1px solid var(--line)}
+.rank .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rank tr.cold td:first-child{box-shadow:inset 3px 0 var(--acc)}
+.pos{font-weight:800;color:var(--mute);width:2em}
+.salas{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.sala{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.sala header{display:flex;justify-content:space-between;gap:8px;align-items:start;margin-bottom:8px}
+.sala header b{display:block}
+.sala header small{color:var(--mute)}
+.sala ol{margin:0;padding:0;list-style:none;display:grid;gap:4px;font-size:14px}
+.sala li{display:grid;grid-template-columns:2.2em 2.4em minmax(0,1fr);gap:6px}
+.sala li .pl{font-weight:800}
+/* membros */
+.mcols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.mlist{list-style:none;margin:0;padding:0;border:1px solid var(--line);border-radius:12px}
+.mlist li{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.mlist li:last-child{border-bottom:0}
+.mlist li .mn{flex:1 1 8em;font-weight:600}
+.mlist .mb{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.mlist li.inativo .mn{color:var(--mute);text-decoration:line-through}
+.addm{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.addm input{flex:1 1 200px;max-width:340px}
+/* tabbys */
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px;margin-bottom:26px}
+.tcard{border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:10px;background:var(--bg);border-top:4px solid var(--chart)}
+.tcard.enc{border-top-color:var(--line)}
+.tcard h4{margin:0;font-size:18px;line-height:1.2}
+.tcard .sub{font-size:14px;color:var(--mute)}
+.tcard .url{font-size:13px;color:var(--mute);overflow-wrap:anywhere}
+.tcard .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.st{font-size:12.5px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;background:var(--panel);color:var(--mute)}
+.st.andamento{background:color-mix(in srgb,var(--ok) 18%,var(--bg));color:var(--ok)}
+.st.futuro{background:color-mix(in srgb,var(--chart) 20%,var(--bg));color:var(--gold)}
+a.btn{text-decoration:none}
+.secth{margin:0 0 10px;font-size:18px}
+body.ro [data-w]{display:none!important}
+body.member [data-adm]{display:none!important}
+body.member .mlist select[data-mdir]{display:none}
+body.ro .chk{pointer-events:none}
+.eqr{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;margin-bottom:8px}
+/* acompanhamento */
+.acgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+.ac{border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px;background:var(--bg)}
+.ac.urg{border-color:var(--acc);box-shadow:inset 0 4px 0 var(--acc)}
+.ac header{display:flex;justify-content:space-between;gap:10px;align-items:start}
+.ac h4{margin:0;font-size:19px;line-height:1.2}
+.ac .sub{font-size:14px;color:var(--mute)}
+.ac .cd{text-align:right;white-space:nowrap}
+.ac .cd strong{display:block;font-size:24px;font-weight:800;line-height:1}
+.ac .cd span{font-size:12.5px;color:var(--mute)}
+.pbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;font-size:13.5px;font-weight:700}
+.pbar .meter i{background:var(--chart)}
+.steps{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px}
+.steps button{display:flex;gap:8px;align-items:center;width:100%;background:none;border:0;padding:5px 0;text-align:left;cursor:pointer;font-size:14px;min-height:34px}
+.steps .bx{width:20px;height:20px;border-radius:6px;border:2px solid var(--line);flex:none;display:grid;place-items:center;font-size:12px;color:#fff}
+.steps .ok .bx{background:var(--ok);border-color:var(--ok)}
+.steps .ok span.t{color:var(--mute)}
+.alert{font-size:13.5px;font-weight:700;color:var(--acc)}
+.log{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:14px}
+.log li{display:grid;grid-template-columns:3.2em minmax(0,1fr);gap:8px}
+.log li b{font-size:13px;color:var(--mute)}
+.acnote{display:flex;gap:8px}
+.acnote input{flex:1;min-height:38px;font-size:15px}
+@media(max-width:600px){.steps{grid-template-columns:minmax(0,1fr)}}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(10,10,12,.5);display:none;align-items:flex-start;justify-content:center;padding:4vh 12px;z-index:50;overflow-y:auto}
+.ov.open{display:flex}
+.modal{background:var(--bg);border-radius:16px;width:min(640px,100%);padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{margin:0 0 14px;font-size:22px}
+.fg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fg .full{grid-column:1/-1}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.mact .sp{margin-right:auto}
+.casa{display:grid;grid-template-columns:3em 5.4em minmax(0,1fr) 5em minmax(0,1fr) 5em;gap:6px;align-items:center;margin-bottom:8px}
+.casa b{font-size:15px}
+.casa input,.casa select{padding:6px;min-height:38px;font-size:15px}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){.toast{transition:none}}
+@media(max-width:900px){.calwrap,.grid2{grid-template-columns:minmax(0,1fr)}.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.cols,.mcols{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){
+.day{min-height:56px;padding:3px}.day .ev{font-size:0;height:6px;padding:0;border-left-width:0;border-radius:3px;background:var(--c,var(--chart))}.ev.camp{background:var(--warn)}.more{display:none}
+.fg{grid-template-columns:minmax(0,1fr)}
+.casa{grid-template-columns:3em minmax(0,1fr) 4.6em;}
+.casa .cl{grid-column:2/4}
+.rank{font-size:13px}.rank th,.rank td{padding:6px 4px}.rank .hide-s{display:none}
+.sync{margin-left:0;width:100%}}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="hrow">
+      <img class="mark" alt="Brasão da Sociedade de Debates" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAI0AAAB6CAMAAAC1FyA2AAAAwFBMVEXqtybqtybqtybqtybqtybqtybqtybqtyYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABRSl6WAAAAQHRSTlMC89KwLZBvTwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlTn1+gAACwtJREFUeNrtW9uS47oKjbn+/x9vAZKNbk4y4+w6p2rnYSbdbVuIy2IB8uv1//kRAP2T+1h/IswBQN/fhyA/kAbgOIC/vYvwOEKaZzVUHnsc30pDZQtVGqRHLWXSKH2tmSoNHfis4yAzfqdvPnwL/hWOZ23FCMzvlUMqbV24pDGve9RWKgjvPIfsGjhiXXJh/Ac6xXrq4y55iznFT0IdoYYwFJ9ex8+H1Z0zkgmD3K5yyeA1fH1MOcc7fbMpjzh06PqIiJLLZg8i4GWFrTFBNS5LElDY7+mounZ7Z8wjSWO+ou138gNT3TkyndII1P8Yjt9IUwEE36rPlBKX4iXL49LIe+UwswiDhM30OH4nTTPEx0YVybp5mungvEldZgtszpOkeTY1XMAByTIH4FY13BkKX09/KpZQly1oI7Xo8UtDuQVKJm/s0mCXF6mUmwbl+KGhipcUlgNV6dqgBDfeRRkOH06aXZAL6ZmwRwu0sKaMP79QTd04iKsFDlTVnau7n+iVKX5SV2nhDKF/2BBTTcrQ3wVU9dzqC2cVQAyQQYfS+k1Pf8Jt6KMqb3DKqAySW3DyE7zXzK35RD+gvYNXNvJyOTN41FPy+W0xdWu/m2KSiPQiB9DAjNSL0EyZxRJ4yFqJF+/Z2c32FXCPM00ONMgDrMqJzWsoSGqN3GqLEOam6tG7Whq30jQDeU6gShXUsTjcOZzHFi6OJVVSKILJnS/qvtHgML8FGSzL1YhuysHw6OoUXKUtINRUQ/QWLbb+rTd8yNa/otTswsE1U5Jq7Nwyt35eouFWmL3eAI6EdSUpBLnrOkxhraIyxC8owRqkbat80xPQBEda/QgGD61gBEIfA/ux9lV5l2VP6NUW6HN8Ugs9/LC5IhtTRYeFbiQqiKMZ/pYL6hl+gCy3juxYK5sgRw9PWSJw+UCmccVGW0dNIOlCgd29Ah0qghAtcNq26cIAFYSgNfBdK9yjSLFlV0YtrVq2WK4qoujcFCSoMco4eSH2O+VBEjKQAxgdmoR7iWBo91rw1aSBMivNo7+laOyIeKHCXrXp5CqUKu+J7hRHK5Ve+biqaNKchYOaEiZpiia1XtB7hsu44wPS7b5kho0J9TRV9ipH0bKhURo1nRm2U2cX263uaw+U0TlkQwfJcb64bOfgthjY2jInDCvUDpLRYXHbBqL4YxdpG4rg5h6vZuuUAs0lkOUhS4aYeh65LqPNhgfZy4NlHWQwP7QIfi075gssarSd8UqcYxXTejZG2kW4wnOaIeJkp1CtoaNZmWpQrMUxbJVeR1IFuKw6MWAtcQ7r53El+DpxB/L0TVu4SwvyJZK4uvHSfCdNIa4I2wed3l6gtg9aL1Ax064beRIUmzTCtW9UhGE96YrcCBLXUgeFlPhBiT3kC6BL29f7UzdPcyWxM1KoHloULtEzwK5rM90bz65reV4ATdm6/ESemzB15P2m5Q4tDZxuUqBWo1FeXERrNXFdszB0fWqVxmkTVW00XWiVqquQzCTK17PBSULZe3XdmPdI9IykdtVqozIutcwP5/2c+EhjmZGoCgxKim+ICh4yw+310ftgans6Al9abNIct5+GvgK14EioaS7C1opvv9M7u5cN99KUjRL3gqIXVW+FKXpAIh+ZDmT50MQKaePDEP2J2mNMWH0MfeIq9ia8L4wo4QQD2TddQPTiqzMJ93BR3QBaAsDULnek7qXB1n8st1mMJamQC53lC8x9ZDOkTTVHcym12Q6c0XgYA2fJ7H4cWp7Q4bH9mTPxKTKZoM51zkZdcCODtpn+FnenSzm6QwzwAhNi0UUOqapxhrb3HDkzAJaNrxvOHlxyjb8XSBOYaMv4Fx7kCbVzVRucOD0+py7vsLPp0ni9f1ab08bMBeKXWHNouKoXFGaLcFpTCZ4xbt4Gq+RdGTfvaH6d66akB5DR/MxH1TPQKKRTKHNx+wr2o43uABLkgKH0mj1zBBfpppFEkni7WsIg7MEMqzClrqA1UZDm5NhzDbCnadnklSA1EJAW5ySk7/tBzTeDuU44oSVNLG5p40RMkucEd3RzcfIUterhGEMlxB6gR4NXHXFwfdogm1zBvwJATNSlAAquaLdTniInD4O6FJaSo1hTL3hYi3L0swzPgTyw5miUrXTThXivHZYrWCPIuyHmsHPsoBEzV0q7tZ4QvWqFN+sGPa6zFUs0+JNyCpSz/7mVJuZEkpwJAoo7bAkXkmWBFHUEj4y5b01YgytR7J007XAJTh7e50az2rr1p06NZWT92BNQyVP/vTSVr5WrYd8YiACU9VEY75bqKE32wYJAPOSZTWHSHBz7Xo5M9c8ej0vnxhfA9YC7PFqG6RhsE+J5m6QKZ36wRbHcdPZwGpfUprDoPO9YSaPTmF5r+5Snjh/QftCiFQPmLlQPq7x2qnGUyn0ymWgD1pp9I07gcAeAr4V/8MqKq3mh3A58BcJGtJnPcDuZh7w4lLRq38lCmiGGj820TGoLVwG2Iwiku9HgASN/3YXUteabgS/CbgoTY39ecbHgefNf+MZQJ01iWA8SBb2BSfvjKqD1cKrOJ6CWD3wnTZuRzDSzWKJvRiz61KTxyL5/p2tdG5PpO9Wrq6Zukdf7doCU3h4f9CENGZPPrSNcbpszgwEvqhZX9RDmddouWa6n7/TKo8Fa0eD6TCoYFVdvgsBququ5XvKSzbuL8NnhAauK2UdQGT9hsZc4SRck/szZ0xqZewrUMyn68bw+rK/QgdbidoouSJCx4/yOs9dID1xcC/APx3t+pY61z+SLLm2SA+qvpkZxn/I4pYWPjgW7hUiyeSblhJfUWW+gMtHkOR19M2bJ9PUZd1JvgNnRAM2qkEk1ofwqjU7K6fcANtyhOoD66kRFCUSb/Vz4S322CdtQJab1ZFTMBaAH8esJRS/WpvhaFomjPp0+uRsX12m8eNEmGsXueOp3JLa6Hs5+epakS5OQbKWxrGkQMMZlpTVglCy5La2TOv/BKaV6kEUG49S2qTX/fOFFL47TZKtzInx3kvIdDqYmXZDHOHGEx5ueZxHIt8O9peEvzpLZbBJSi8Oej13XDWr31tomreq/WoXlQ9cBpqJNlAePktE4PmBb0joW5R+rLQWmgi4HED37Ws7RmsEQdb/rytTSpPFmgJ/5uIpl4KfP1hkNADhJDCBfrdBwZoBmrNo5QDjw0wH6d6LkUUYs+8aNMbq0B5x1/GOHD/kcMLsYjKtm/1ogM13tRz75WgX706GbC1rz0Q3o45d6YAJ6YmpNSreyPCmNHTLI4WvBSmehxXJNHGzskzv5B/romR58cyB7ZHFJcVS8Gn9yvSRAcaqrH67i8dTrUxVk4GyaWEUWfinHpBuuhKdcgrklypbEHpAE8gRRia55xwV1l24Q25QeYmxVb5c6yKG/O9wMXdhoOwSqcI3GGhONX9ggUGLkIJVwtBYp4F+rh5MWoDkutBSPWTehx7JkRGFxlna4N2ZsT/iOwrkQ0NVqozxq1TRErEeuzWaVqAZq6hN5qg0VDVaxxTSlrheENG3YeY6erO6z+WlzZn5EmExapOt/UBvwFiaKPf5ziEk2foHnjsmfY2awExTDi1DUzsxX+nVtv3oOd5MlfuKIvh8d09TMwsWrdiPHRI/z0JVp6M/ehZ1OCGa6tEjHCQJp9H3sD4+UYe+zx/VXh8wJl1Di0HP85r2B3JHV+U3OBerrL16Z+u7Vssn/fy6NfhMBP5Tm2zdSBQ59vX75Nj9/l3R/Kc2zJdF/n0ct8z9kmjKlFfgX5fkHmnU9UR796G8AAAAASUVORK5CYII=">
+      <div><h1>Sociedade de Debates</h1><p>UFC · Painel de gestão</p></div>
+      <span class="sync" id="sync">Conectando…</span><span id="who" class="sync" style="margin-left:12px"></span>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Seções">
+      <a href="#eu">Minha área</a>
+      <a href="#demandas">Demandas</a>
+      <a href="#calendario">Calendário</a>
+      <a href="#campeonatos">Campeonatos</a>
+      <a href="#acompanhamento">Acompanhamento</a>
+      <a href="#tabbys">Tabbys</a>
+      <a href="#desempenho">Desempenho</a>
+      <a href="#resultados">Resultados</a>
+      <a href="#membros">Membros</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap"><div id="note"></div><div id="view"></div></main>
+<div class="ov" id="ov" role="dialog" aria-modal="true" aria-labelledby="mt"><form class="modal" id="mform" novalidate><h3 id="mt"></h3><div id="mbody"></div><div class="mact" id="mact"></div></form></div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const pad=n=>String(n).padStart(2,'0');
+const isoD=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const TODAY=isoD(new Date());
+const parse=s=>{const[y,m,d]=String(s).split('-').map(Number);return new Date(y,m-1,d)};
+const fmt=s=>{if(!s)return'';const p=s.split('-');return p[2]+'/'+p[1]};
+const fmtY=s=>s?fmt(s)+'/'+s.slice(0,4):'';
+const dias=(a,b)=>Math.round((parse(b)-parse(a))/864e5);
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MESF=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DIR={academica:'Acadêmica',debates:'Debates',comercial:'Comercial',mkt:'Marketing'};
+const TIPO={treino:'Treino',reuniao:'Reunião',evento:'Evento interno',prazo:'Prazo',outro:'Outro'};
+const STATUS=[['analise','Em análise'],['abertas','Inscrições abertas'],['insc','Inscritos'],['conf','Confirmado'],['fim','Concluído'],['nao','Não vamos']];
+const CASAS=['OG','OO','CG','CO'];
+const CTX={treino:'Treino',campeonato:'Campeonato',interno:'Torneio interno'};
+const COLS=['membros','demandas','eventos','campeonatos','registros','tabbys','diretoria','acesso'];
+const MCOLS=['membros','demandas','eventos','campeonatos','registros','tabbys'];
+const S={};COLS.forEach(c=>S[c]=[]);
+const view=$('#view');
+let db=null,pending=false,modalOpen=false,RO=false,ADMIN=false;
+const ui={resCamp:'',eu:'',dir:'todas',busca:'',calY:new Date().getFullYear(),calM:new Date().getMonth(),calMode:'mes',showFim:false,per:'ano',ctx:'todos',cat:'todos',sort:'pts'};
+
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
+function fail(e){const c=e&&e.code;toast(c==='permission-denied'?'Sem permissão: só a diretoria edita.':c==='resource-exhausted'?'Limite do plano gratuito atingido hoje.':c==='quota_exceeded'?'Limite de armazenamento atingido.':'Não foi possível salvar. Tente de novo.')}
+async function save(col,id,obj){if(db){try{await db.collection(col).doc(id).set(obj)}catch(e){fail(e);throw e}}else{const i=S[col].findIndex(x=>x.id===id);const o={...obj,id};i<0?S[col].push(o):S[col][i]=o;render(true)}}
+async function patch(col,id,obj){if(db){try{await db.collection(col).doc(id).update(obj)}catch(e){fail(e)}}else{const o=S[col].find(x=>x.id===id);if(o)Object.assign(o,obj);render()}}
+async function del(col,id){if(db){try{await db.collection(col).doc(id).delete()}catch(e){fail(e)}}else{S[col]=S[col].filter(x=>x.id!==id);render(true)}}
+const strip=o=>{const c={...o};delete c.id;return c};
+const mem=id=>S.membros.find(m=>m.id===id);
+const mname=id=>mem(id)?.nome||'(removido)';
+
+/* ---------- modal ---------- */
+let onSubmit=null;
+function openModal(title,body,actions,submit){$('#mt').textContent=title;$('#mbody').innerHTML=body;$('#mact').innerHTML=actions;onSubmit=submit;$('#ov').classList.add('open');modalOpen=true;setTimeout(()=>{const f=$('#mbody').querySelector('input,select,textarea');f&&f.focus()},30)}
+function closeModal(){$('#ov').classList.remove('open');modalOpen=false;onSubmit=null;if(pending){pending=false;render(true)}}
+$('#mform').addEventListener('submit',async e=>{e.preventDefault();if(!onSubmit)return;const fd=Object.fromEntries(new FormData(e.target));try{const ok=await onSubmit(fd);if(ok!==false)closeModal()}catch(err){}});
+$('#ov').addEventListener('click',e=>{if(e.target.id==='ov')closeModal()});
+$('#mact').addEventListener('click',e=>{const a=e.target.closest('[data-m]');if(!a)return;if(a.dataset.m==='cancel')closeModal();if(a.dataset.m==='del'&&a._del){a._del();closeModal()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&modalOpen)closeModal()});
+const acts=(delFn)=>(delFn?'<button type="button" class="btn danger sp" data-m="del">Excluir</button>':'')+'<button type="button" class="btn" data-m="cancel">Cancelar</button><button class="btn pri">Salvar</button>';
+function bindDel(fn){const b=$('#mact [data-m=del]');if(b)b._del=fn}
+const opt=(v,l,cur)=>`<option value="${esc(v)}"${String(cur??'')===String(v)?' selected':''}>${esc(l)}</option>`;
+const memOpts=(cur,blank='—')=>{const a=S.membros.filter(m=>m.ativo!==false||m.id===cur).sort((x,y)=>x.nome.localeCompare(y.nome));return opt('',blank,cur)+['efetivo','aspira'].map(c=>`<optgroup label="${c==='efetivo'?'Efetivos':'Aspiras'}">${a.filter(m=>m.categoria===c).map(m=>opt(m.id,m.nome,cur)).join('')}</optgroup>`).join('')};
+const datalist=()=>`<datalist id="dlm">${S.membros.map(m=>`<option value="${esc(m.nome)}">`).join('')}</datalist>`;
+
+/* ---------- demandas ---------- */
+function demandaForm(d={}){
+  const isNew=!d.id;
+  openModal(isNew?'Nova demanda':'Editar demanda',`<div class="fg">
+  <label class="f full">Demanda<input name="titulo" id="f-tit" required value="${esc(d.titulo)}" placeholder="Ex.: fechar parceria com cursinho"></label>
+  <label class="f">Diretoria<select name="diretoria" id="f-dir">${Object.entries(DIR).map(([k,v])=>opt(k,v,d.diretoria||(ui.dir!=='todas'?ui.dir:'academica'))).join('')}</select></label>
+  <label class="f">Responsável<input name="responsavel" id="f-resp" list="dlm" value="${esc(d.responsavel)}">${datalist()}</label>
+  <label class="f">Prazo<input type="date" name="prazo" id="f-prz" value="${esc(d.prazo)}"></label>
+  <label class="f">Prioridade<select name="prioridade" id="f-pri">${opt('media','Média',d.prioridade||'media')}${opt('alta','Alta',d.prioridade)}${opt('baixa','Baixa',d.prioridade)}</select></label>
+  <label class="f">Situação<select name="status" id="f-st">${opt('afazer','A fazer',d.status||'afazer')}${opt('andamento','Em andamento',d.status)}${opt('concluida','Concluída',d.status)}</select></label>
+  <label class="f full">Detalhes<textarea name="descricao" id="f-desc">${esc(d.descricao)}</textarea></label></div>`,acts(!isNew),async f=>{
+    if(!f.titulo.trim()){toast('Dê um nome à demanda.');return false}
+    const o={...strip(d),...f,titulo:f.titulo.trim(),criadoEm:d.criadoEm||TODAY};
+    o.concluidaEm=f.status==='concluida'?(d.concluidaEm||TODAY):'';
+    await save('demandas',d.id||uid(),o);toast(isNew?'Demanda criada':'Demanda atualizada')});
+  if(!isNew)bindDel(()=>del('demandas',d.id));
+}
+function taskLi(d){
+  const done=d.status==='concluida',late=!done&&d.prazo&&d.prazo<TODAY;
+  return `<li class="task d-${esc(d.diretoria)} prio-${esc(d.prioridade)}${done?' done':''}" data-id="${esc(d.id)}">
+  <button class="chk" data-act="toggle" aria-label="${done?'Reabrir':'Concluir'} ${esc(d.titulo)}"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 8.5l3.2 3L13 4.5"/></svg></button>
+  <div><button class="ttl" data-act="edit">${esc(d.titulo)}</button>
+  <div class="meta"><span class="tag d-${esc(d.diretoria)}">${esc(DIR[d.diretoria]||d.diretoria)}</span>${d.responsavel?`<span>${esc(d.responsavel)}</span>`:''}${d.status==='andamento'?'<span class="prog">em andamento</span>':''}${done?`<span class="nw">concluída ${esc(fmt(d.concluidaEm))}</span>`:d.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(d.prazo))}</span>`:''}</div></div></li>`;
+}
+function dLists(){
+  const q=ui.busca.toLowerCase();
+  const L=S.demandas.filter(d=>(ui.dir==='todas'||d.diretoria===ui.dir)&&(!q||(d.titulo+' '+(d.responsavel||'')+' '+(d.descricao||'')).toLowerCase().includes(q)));
+  const pr={alta:0,media:1,baixa:2};
+  const open=L.filter(d=>d.status!=='concluida').sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999')||(pr[a.prioridade]??1)-(pr[b.prioridade]??1));
+  const done=L.filter(d=>d.status==='concluida').sort((a,b)=>(b.concluidaEm||'').localeCompare(a.concluidaEm||''));
+  return `<div class="col"><h3>A fazer <span>${open.length}</span></h3>${open.length?`<ul class="tlist">${open.map(taskLi).join('')}</ul>`:'<div class="empty">Nada pendente aqui.</div>'}</div>
+  <div class="col"><h3>Concluídas <span>${done.length}</span></h3>${done.length?`<ul class="tlist">${done.map(taskLi).join('')}</ul>`:'<div class="empty">Nenhuma demanda concluída ainda.</div>'}</div>`;
+}
+function vDemandas(){
+  const cards=Object.entries(DIR).map(([k,v])=>{const l=S.demandas.filter(d=>d.diretoria===k),dn=l.filter(d=>d.status==='concluida').length,p=l.length-dn,lt=l.filter(d=>d.status!=='concluida'&&d.prazo&&d.prazo<TODAY).length;
+    return `<button class="dcard d-${k}" data-dir="${k}" aria-pressed="${ui.dir===k}"><b>${v}</b><div class="dnum"><div><strong>${p}</strong>pendentes</div><div><strong>${dn}</strong>concluídas</div>${lt?`<div class="late"><strong style="color:var(--acc)">${lt}</strong>atrasadas</div>`:''}</div><div class="meter"><i style="width:${l.length?Math.round(dn/l.length*100):0}%"></i></div></button>`}).join('');
+  return `<div class="vh"><div><h2>Demandas das diretorias</h2><p>${S.demandas.filter(d=>d.status!=='concluida').length} pendentes no total · clique numa diretoria para filtrar</p></div><button class="btn pri" data-act="new-d" data-w>+ Nova demanda</button></div>
+  <div class="dgrid">${cards}</div>
+  <div class="tools"><div class="chips">${[['todas','Todas'],...Object.entries(DIR)].map(([k,v])=>`<button class="chip" data-dir="${k}" aria-pressed="${ui.dir===k}">${v}</button>`).join('')}</div><input type="search" id="busca" placeholder="Buscar demanda ou responsável" value="${esc(ui.busca)}" aria-label="Buscar"></div>
+  <div class="cols" id="dlists">${dLists()}</div>`;
+}
+
+/* ---------- calendario ---------- */
+const campStatus=c=>STATUS.find(s=>s[0]===c.status)?.[1]||'';
+function itemsOn(day){
+  const ev=S.eventos.filter(e=>e.data&&e.data<=day&&(e.fim||e.data)>=day).map(e=>({k:'ev',o:e}));
+  const cp=S.campeonatos.filter(c=>c.inicio&&c.status!=='nao'&&c.inicio<=day&&(c.fim||c.inicio)>=day).map(c=>({k:'camp',o:c}));
+  return [...cp,...ev];
+}
+function evChip(it){const o=it.o;return it.k==='camp'?`<button class="ev camp" data-act="goto-camp" title="${esc(o.nome)}">${esc(o.nome)}</button>`:`<button class="ev ${o.diretoria?'d-'+esc(o.diretoria):''}" data-act="edit-ev" data-id="${esc(o.id)}" title="${esc(o.titulo)}">${esc(o.titulo)}</button>`}
+function allItems(){return [...S.eventos.filter(e=>e.data).map(e=>({k:'ev',d:e.data,f:e.fim,t:e.titulo,s:TIPO[e.tipo]||'',o:e})),...S.campeonatos.filter(c=>c.inicio&&c.status!=='nao').map(c=>({k:'camp',d:c.inicio,f:c.fim,t:c.nome,s:'Campeonato'+(c.cidade?' · '+c.cidade:''),o:c}))].sort((a,b)=>a.d.localeCompare(b.d))}
+function vCalendario(){
+  const y=ui.calY,m=ui.calM;
+  const bar=`<div class="calbar"><button class="btn sm" data-act="cal-prev" aria-label="Anterior">‹</button><h3>${ui.calMode==='mes'?MESF[m]+' '+y:'Ano de '+y}</h3><button class="btn sm" data-act="cal-next" aria-label="Próximo">›</button><button class="btn sm ghost" data-act="cal-hoje">Hoje</button><div class="chips" style="margin-left:auto"><button class="chip" data-act="cal-mode" data-v="mes" aria-pressed="${ui.calMode==='mes'}">Mês</button><button class="chip" data-act="cal-mode" data-v="ano" aria-pressed="${ui.calMode==='ano'}">Ano</button></div></div>`;
+  let body;
+  if(ui.calMode==='mes'){
+    const first=new Date(y,m,1),start=new Date(y,m,1-first.getDay());let cells='';
+    for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);if(i===35&&d.getMonth()!==m)break;const ds=isoD(d),it=itemsOn(ds);
+      cells+=`<div class="day${d.getMonth()!==m?' out':''}${ds===TODAY?' today':''}" data-act="new-ev" data-day="${ds}"><span class="dn">${d.getDate()}</span>${it.slice(0,3).map(evChip).join('')}${it.length>3?`<span class="more">+${it.length-3}</span>`:''}</div>`}
+    const up=allItems().filter(i=>(i.f||i.d)>=TODAY).slice(0,10);
+    body=`<div class="calwrap"><div class="cal">${['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(w=>`<div class="wd">${w}</div>`).join('')}${cells}</div>
+    <aside class="side"><h3>Próximos</h3>${up.length?`<ul class="up">${up.map(i=>`<li><button data-act="${i.k==='camp'?'goto-camp':'edit-ev'}" data-id="${esc(i.o.id)}"><span class="dt">${esc(fmt(i.d))}<small>${dias(TODAY,i.d)<=0?'agora':'em '+dias(TODAY,i.d)+' d'}</small></span><span><span class="nm">${esc(i.t)}</span><span class="sub">${esc(i.s)}${i.f&&i.f!==i.d?' · até '+esc(fmt(i.f)):''}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Sem eventos futuros. Clique num dia para criar.</div>'}</aside></div>`;
+  }else{
+    const all=allItems();const curM=new Date().getFullYear()===y?new Date().getMonth():-1;
+    body=`<div class="year">${MESF.map((n,i)=>{const pre=y+'-'+pad(i+1);const l=all.filter(x=>x.d.startsWith(pre));return `<div class="mcard${i===curM?' cur':''}"><h4>${n}</h4>${l.length?`<ul>${l.map(x=>`<li><b>${esc(x.d.slice(8))}${x.f&&x.f!==x.d?'–'+esc(x.f.slice(8)):''}</b><span${x.k==='camp'?' style="font-weight:700"':''}>${esc(x.t)}</span></li>`).join('')}</ul>`:'<span class="muted" style="font-size:14px">Nada marcado</span>'}</div>`}).join('')}</div>`;
+  }
+  return `<div class="vh"><div><h2>Calendário anual</h2><p>Treinos, reuniões e prazos da gestão. Campeonatos da planilha aparecem em destaque.</p></div><button class="btn pri" data-act="new-ev" data-day="${TODAY}" data-w>+ Novo evento</button></div>${bar}${body}`;
+}
+function eventoForm(e={}){
+  const isNew=!e.id;
+  openModal(isNew?'Novo evento':'Editar evento',`<div class="fg">
+  <label class="f full">Título<input name="titulo" id="e-tit" value="${esc(e.titulo)}" placeholder="Ex.: Treino aberto de BP"></label>
+  <label class="f">Data<input type="date" name="data" id="e-dt" value="${esc(e.data)}"></label>
+  <label class="f">Até (opcional)<input type="date" name="fim" id="e-fim" value="${esc(e.fim)}"></label>
+  <label class="f">Tipo<select name="tipo" id="e-tipo">${Object.entries(TIPO).map(([k,v])=>opt(k,v,e.tipo||'treino')).join('')}</select></label>
+  <label class="f">Diretoria<select name="diretoria" id="e-dir">${opt('','Geral',e.diretoria)}${Object.entries(DIR).map(([k,v])=>opt(k,v,e.diretoria)).join('')}</select></label>
+  <label class="f full">Local<input name="local" id="e-loc" value="${esc(e.local)}"></label>
+  <label class="f full">Notas<textarea name="notas" id="e-notas">${esc(e.notas)}</textarea></label></div>`,acts(!isNew),async f=>{
+    if(!f.titulo.trim()||!f.data){toast('Preencha título e data.');return false}
+    if(f.fim&&f.fim<f.data)f.fim='';
+    await save('eventos',e.id||uid(),{...strip(e),...f,titulo:f.titulo.trim()});toast('Evento salvo')});
+  if(!isNew)bindDel(()=>del('eventos',e.id));
+}
+
+/* ---------- campeonatos ---------- */
+const CC=[['nome','Campeonato','text','14em'],['inicio','Início','date'],['fim','Fim','date'],['cidade','Cidade','text','9em'],['formato','Formato','select',['BP','WSDC','Asiático','Outro']],['prazo','Prazo inscrição','date'],['taxa','Taxa (R$)','number','6em'],['duplas','Duplas','number','4.5em'],['juizes','Juízes','number','4.5em'],['status','Status','status'],['responsavel','Responsável','text','9em'],['resultado','Resultado','text','12em'],['notas','Notas','text','16em']];
+const FUNC=['Debatedor(a)','Juiz(a)','CA (adjudicação)','Tab','Organização geral','Logística','Credenciamento','Comunicação','Voluntário(a)'];
+function equipeForm(c){
+  let rows=(Array.isArray(c.equipe)?c.equipe:[]).map(x=>({...x}));if(!rows.length)rows=[{membroId:'',funcao:''}];
+  const draw=()=>{$('#eqrows').innerHTML=rows.map((r,i)=>`<div class="eqr"><select name="m_${i}" id="eq-m-${i}" aria-label="Membro">${memOpts(r.membroId,'Membro')}</select><input name="f_${i}" id="eq-f-${i}" list="dlf" value="${esc(r.funcao)}" placeholder="Função" aria-label="Função"><button type="button" class="btn sm ghost danger" data-eqdel="${i}" aria-label="Remover">✕</button></div>`).join('')};
+  const sync=()=>{rows=rows.map((r,i)=>({membroId:$('#eq-m-'+i)?.value||'',funcao:$('#eq-f-'+i)?.value||''}))};
+  openModal('Equipe: '+(c.nome||'campeonato'),`<p class="muted" style="margin:0 0 12px;font-size:14px">Quem vai pela SdD e em que função: delegação (debatedores, juízes) e organização (CA, tab, logística...).</p><div id="eqrows"></div><datalist id="dlf">${FUNC.map(f=>`<option value="${esc(f)}">`).join('')}</datalist><button type="button" class="btn sm" id="eqadd">+ Pessoa</button>`,acts(false),async f=>{
+    const out=[];rows.forEach((_,i)=>{const m=f['m_'+i],fn=(f['f_'+i]||'').trim();if(m)out.push({membroId:m,funcao:fn})});
+    await patch('campeonatos',c.id,{equipe:out});toast('Equipe salva ('+out.length+')')});
+  draw();
+  $('#eqadd').onclick=()=>{sync();rows.push({membroId:'',funcao:''});draw()};
+  $('#eqrows').onclick=e=>{const b=e.target.closest('[data-eqdel]');if(!b)return;sync();rows.splice(Number(b.dataset.eqdel),1);if(!rows.length)rows.push({membroId:'',funcao:''});draw()};
+}
+const eqLabel=c=>{const n=Array.isArray(c.equipe)?c.equipe.length:0;return n?n+(n>1?' pessoas':' pessoa'):'Montar'};
+function vCampeonatos(){
+  const L=S.campeonatos.filter(c=>ui.showFim||!['fim','nao'].includes(c.status)).sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999'));
+  const ativos=S.campeonatos.filter(c=>!['fim','nao'].includes(c.status));
+  const fut=ativos.filter(c=>c.inicio&&c.inicio>=TODAY);
+  const prz=ativos.filter(c=>c.prazo&&c.prazo>=TODAY&&dias(TODAY,c.prazo)<=14);
+  const taxa=ativos.filter(c=>['insc','conf','abertas'].includes(c.status)).reduce((s,c)=>s+(Number(c.taxa)||0)*(Number(c.duplas)||1),0);
+  const conf=ativos.filter(c=>['insc','conf'].includes(c.status)).length;
+  const rows=L.map((c,i)=>{const al=c.prazo&&c.prazo>=TODAY&&dias(TODAY,c.prazo)<=14&&!['insc','conf','fim','nao'].includes(c.status);
+    return `<tr class="st-${esc(c.status||'analise')}${al?' alert':''}" data-id="${esc(c.id)}"><td class="rn">${i+1}</td>${CC.map(([k,l,t,w])=>{const v=c[k]??'';const id=`c-${esc(c.id)}-${k}`;
+      if(t==='select')return `<td><select${RO?' disabled':''} id="${id}" data-f="${k}" aria-label="${l}">${opt('','—',v)}${w.map(o=>opt(o,o,v)).join('')}</select></td>`;
+      if(t==='status')return `<td><select${RO?' disabled':''} id="${id}" data-f="${k}" aria-label="${l}">${STATUS.map(([a,b])=>opt(a,b,v||'analise')).join('')}</select></td>`;
+       return `<td class="${k==='prazo'?'prz':''}"><input${RO?' disabled':''} id="${id}" data-f="${k}" type="${t}" aria-label="${l}" value="${esc(v)}"${w?` style="width:${w}"`:''}${t==='number'?' min="0" step="any"':''}></td>`}).join('')}<td><button class="btn sm" data-act="${RO?'eq-view':'eq'}" style="white-space:nowrap">${esc(eqLabel(c))}</button></td><td><button class="btn sm ghost danger" data-act="del-camp" data-w aria-label="Excluir ${esc(c.nome)}">✕</button></td></tr>`}).join('');
+  return `<div class="vh"><div><h2>Campeonatos e eventos externos</h2><p>Planilha da temporada. Edite direto nas células; tudo salva sozinho.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="toggle-fim">${ui.showFim?'Ocultar':'Mostrar'} concluídos</button><button class="btn pri" data-act="new-camp" data-w>+ Nova linha</button></div></div>
+  <div class="sumrow"><div class="stat"><strong>${fut.length}</strong><span>campeonatos à frente</span></div><div class="stat"><strong>${conf}</strong><span>com inscrição feita</span></div><div class="stat"><strong style="${prz.length?'color:var(--acc)':''}">${prz.length}</strong><span>prazos de inscrição em 14 dias</span></div><div class="stat"><strong>R$ ${taxa.toLocaleString('pt-BR',{maximumFractionDigits:0})}</strong><span>em taxas previstas (taxa × duplas)</span></div></div>
+  ${L.length?`<div class="scroll" id="sheet"><table class="sheet"><thead><tr><th>#</th>${CC.map(c=>`<th>${c[1]}</th>`).join('')}<th>Equipe</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Nenhum campeonato na planilha. Use “+ Nova linha”.</div>'}`;
+}
+
+/* ---------- desempenho ---------- */
+function regsFiltered(){
+  const lim=ui.per==='30'?isoD(new Date(Date.now()-30*864e5)):ui.per==='90'?isoD(new Date(Date.now()-90*864e5)):ui.per==='ano'?new Date().getFullYear()+'-01-01':ui.per==='sem'?(new Date().getMonth()<6?new Date().getFullYear()+'-01-01':new Date().getFullYear()+'-07-01'):'0000';
+  return S.registros.filter(r=>r.data>=lim&&(ui.ctx==='todos'||r.contexto===ui.ctx)&&(ui.cat==='todos'||mem(r.membroId)?.categoria===ui.cat));
+}
+const ptsOf=r=>r.colocacao?4-Number(r.colocacao):null;
+const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+const f1=v=>v==null?'–':v.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+function vDesempenho(){
+  const R=regsFiltered(),deb=R.filter(r=>r.funcao==='debatedor');
+  const salas=new Set(R.map(r=>r.salaId)).size;
+  const spk=avg(deb.map(r=>Number(r.speaks)).filter(x=>x>0));
+  const ms=S.membros.filter(m=>m.ativo!==false&&(ui.cat==='todos'||m.categoria===ui.cat));
+  const lastOf=id=>S.registros.filter(r=>r.membroId===id).reduce((a,r)=>r.data>a?r.data:a,'');
+  const frios=ms.filter(m=>{const l=lastOf(m.id);return !l||dias(l,TODAY)>30});
+  // por mês (últimos 12)
+  const now=new Date(),months=[];for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push(d.getFullYear()+'-'+pad(d.getMonth()+1))}
+  const base=S.registros.filter(r=>(ui.ctx==='todos'||r.contexto===ui.ctx)&&(ui.cat==='todos'||mem(r.membroId)?.categoria===ui.cat));
+  const mc=months.map(k=>base.filter(r=>r.data.startsWith(k)).length),mx=Math.max(1,...mc);
+  // casas
+  const casa=CASAS.map(c=>{const t={};deb.filter(r=>r.casa===c&&r.colocacao).forEach(r=>t[r.salaId]=ptsOf(r));const v=Object.values(t);return [c,avg(v),v.length]});
+  // ranking
+  let rk=ms.map(m=>{const mine=R.filter(r=>r.membroId===m.id),d=mine.filter(r=>r.funcao==='debatedor');const p=d.map(ptsOf).filter(x=>x!=null);
+    return {m,deb:d.length,jz:mine.filter(r=>r.funcao==='juiz').length,pts:avg(p),spk:avg(d.map(r=>Number(r.speaks)).filter(x=>x>0)),pri:d.filter(r=>Number(r.colocacao)===1).length,last:lastOf(m.id)}});
+  const key={pts:x=>x.pts??-1,spk:x=>x.spk??-1,deb:x=>x.deb,jz:x=>x.jz,pri:x=>x.pri,last:x=>x.last||'',nome:x=>x.m.nome};
+  rk.sort((a,b)=>{const k=key[ui.sort];const A=k(a),B=k(b);return ui.sort==='nome'?String(A).localeCompare(B):(B>A?1:B<A?-1:0)||b.deb-a.deb});
+  const th=(k,l,c='')=>`<th class="${c}"><button data-sort="${k}"${ui.sort===k?' aria-sort="descending"':''}>${l}${ui.sort===k?' ↓':''}</button></th>`;
+  const salasL=[...new Set(R.map(r=>r.salaId))].map(id=>{const rs=R.filter(r=>r.salaId===id);return {id,data:rs[0].data,ev:rs[0].evento,ctx:rs[0].contexto,rs}}).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,9);
+  const sel=(id,l,v,o)=>`<label class="f">${l}<select id="${id}" data-filter="${id}">${o.map(([a,b])=>opt(a,b,v)).join('')}</select></label>`;
+  return `<div class="vh"><div><h2>Rendimento e participação</h2><p>Registre cada sala de treino ou campeonato. Pontos por sala: 1º = 3, 2º = 2, 3º = 1, 4º = 0.</p></div><button class="btn pri" data-act="new-sala" data-w>+ Registrar sala</button></div>
+  <div class="filters">${sel('per','Período',ui.per,[['30','Últimos 30 dias'],['90','Últimos 90 dias'],['sem','Semestre atual'],['ano','Este ano'],['tudo','Tudo']])}${sel('ctx','Contexto',ui.ctx,[['todos','Todos'],...Object.entries(CTX)])}${sel('cat','Membros',ui.cat,[['todos','Todos'],['efetivo','Efetivos'],['aspira','Aspiras']])}</div>
+  <div class="sumrow"><div class="stat"><strong>${salas}</strong><span>salas registradas</span></div><div class="stat"><strong>${deb.length}</strong><span>participações como debatedor</span></div><div class="stat"><strong>${f1(spk)}</strong><span>speaks médio</span></div><div class="stat"><strong style="${frios.length?'color:var(--acc)':''}">${frios.length}</strong><span>membros sem debater há 30+ dias</span></div></div>
+  <div class="grid2"><div class="panel"><h3>Participações por mês</h3><p class="cap">Debatedores e juízes registrados nos últimos 12 meses</p><div class="bars">${months.map((k,i)=>`<div class="bar${i===11?' cur':''}"><b>${mc[i]||''}</b><i style="height:${mc[i]/mx*100}%"></i><span>${MES[Number(k.slice(5))-1]}</span></div>`).join('')}</div></div>
+  <div class="panel"><h3>Pontos médios por casa</h3><p class="cap">Como nossas duplas rendem em cada posição</p>${casa.map(([c,v,n])=>`<div class="hb"><b style="text-align:left">${c}</b><div class="tr"><i style="width:${v==null?0:v/3*100}%"></i></div><b>${f1(v)}</b></div>`).join('')}<p class="cap" style="margin:6px 0 0">${casa.reduce((s,c)=>s+c[2],0)} duplas no período</p></div></div>
+  <div class="panel" style="margin-bottom:24px"><h3>Ranking interno</h3><p class="cap">Clique no título da coluna para ordenar. A marca vermelha indica quem não debate há mais de 30 dias.</p>
+  ${ms.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th class="pos">#</th>${th('nome','Membro')}${th('deb','Debates','n')}${th('pts','Pts/sala','n')}${th('spk','Speaks','n')}${th('pri','1º lugares','n hide-s')}${th('jz','Juizou','n hide-s')}${th('last','Último','n')}</tr></thead><tbody>${rk.map((x,i)=>`<tr class="${!x.last||dias(x.last,TODAY)>30?'cold':''}"><td class="pos">${i+1}</td><td>${esc(x.m.nome)} <span class="muted" style="font-size:12.5px">${x.m.categoria==='aspira'?'aspira':''}</span></td><td class="n">${x.deb}</td><td class="n">${f1(x.pts)}</td><td class="n">${f1(x.spk)}</td><td class="n hide-s">${x.pri}</td><td class="n hide-s">${x.jz}</td><td class="n">${x.last?esc(fmt(x.last)):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Cadastre membros na aba Membros.</div>'}</div>
+  <h3 style="margin:0 0 10px;font-size:18px">Salas recentes</h3>
+  ${salasL.length?`<div class="salas">${salasL.map(s=>`<article class="sala"><header><div><b>${esc(s.ev||CTX[s.ctx]||'Sala')}</b><small>${esc(fmtY(s.data))} · ${esc(CTX[s.ctx]||'')}</small></div><button class="btn sm ghost danger" data-act="del-sala" data-w data-id="${esc(s.id)}" aria-label="Excluir sala">✕</button></header><ol>${CASAS.map(c=>{const t=s.rs.filter(r=>r.casa===c&&r.funcao==='debatedor');if(!t.length)return'';return `<li><span class="pl">${t[0].colocacao?esc(t[0].colocacao)+'º':'–'}</span><b>${c}</b><span>${t.map(r=>esc(mname(r.membroId))+(r.speaks?' <span class="muted">('+esc(r.speaks)+')</span>':'')).join(', ')}</span></li>`}).join('')}${(()=>{const j=s.rs.filter(r=>r.funcao==='juiz');return j.length?`<li><span></span><b class="muted">Juiz</b><span class="muted">${j.map(r=>esc(mname(r.membroId))).join(', ')}</span></li>`:''})()}</ol></article>`).join('')}</div>`:'<div class="empty">Nenhuma sala no período. Use “+ Registrar sala”.</div>'}`;
+}
+function salaForm(){
+  if(!S.membros.length){toast('Cadastre os membros primeiro.');location.hash='membros';return}
+  openModal('Registrar sala',`<div class="fg"><label class="f">Data<input type="date" name="data" id="s-dt" value="${TODAY}"></label><label class="f">Contexto<select name="contexto" id="s-ctx">${Object.entries(CTX).map(([k,v])=>opt(k,v,'treino')).join('')}</select></label><label class="f full">Campeonato (se a sala foi num campeonato)<select name="campeonatoId" id="s-camp">${opt('','Nenhum (treino ou interno)','')}${S.campeonatos.filter(c=>c.nome&&c.status!=='nao').sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||'')).map(c=>opt(c.id,c.nome+(c.inicio?' ('+fmt(c.inicio)+')':''),'')).join('')}</select></label><label class="f full">Rodada, evento ou moção (opcional)<input name="evento" id="s-ev" placeholder="Ex.: Rodada 3 · EC que..."></label></div>
+  <p class="muted" style="font-size:14px;margin:16px 0 8px">Preencha só as casas que tiveram membros da SdD. Speaks são opcionais.</p>
+  ${CASAS.map(c=>`<div class="casa"><b>${c}</b><select class="cl" name="col_${c}" id="s-col-${c}" aria-label="Colocação ${c}">${opt('','Coloc.','')}${[1,2,3,4].map(n=>opt(n,n+'º','')).join('')}</select><select name="m1_${c}" id="s-m1-${c}" aria-label="${c} debatedor 1">${memOpts('','Debatedor 1')}</select><input type="number" name="s1_${c}" id="s-s1-${c}" placeholder="Speaks" min="50" max="100" step="0.5" aria-label="Speaks"><select name="m2_${c}" id="s-m2-${c}" aria-label="${c} debatedor 2">${memOpts('','Debatedor 2')}</select><input type="number" name="s2_${c}" id="s-s2-${c}" placeholder="Speaks" min="50" max="100" step="0.5" aria-label="Speaks"></div>`).join('')}
+  <div class="fg" style="margin-top:10px">${[1,2,3].map(n=>`<label class="f">Juiz ${n}<select name="j${n}" id="s-j${n}">${memOpts('','—')}</select></label>`).join('')}</div>`,acts(false),async f=>{
+    const cols=CASAS.map(c=>f['col_'+c]).filter(Boolean);
+    if(new Set(cols).size!==cols.length){toast('Duas casas com a mesma colocação.');return false}
+    const camp=S.campeonatos.find(x=>x.id===f.campeonatoId);const salaId=uid(),base={salaId,data:f.data||TODAY,contexto:camp?'campeonato':f.contexto,evento:(f.evento||'').trim()||(camp?camp.nome:''),campeonatoId:camp?camp.id:''},rows=[];
+    CASAS.forEach(c=>[1,2].forEach(n=>{const m=f[`m${n}_${c}`];if(m)rows.push({...base,membroId:m,funcao:'debatedor',casa:c,colocacao:f['col_'+c]||'',speaks:f[`s${n}_${c}`]||''})}));
+    [1,2,3].forEach(n=>{if(f['j'+n])rows.push({...base,membroId:f['j'+n],funcao:'juiz',casa:'',colocacao:'',speaks:''})});
+    if(!rows.length){toast('Escolha ao menos um membro.');return false}
+    await Promise.all(rows.map(r=>save('registros',uid(),r)));toast('Sala registrada ('+rows.length+' participações)')});
+}
+
+/* ---------- membros ---------- */
+function vMembros(){
+  const cnt=id=>S.registros.filter(r=>r.membroId===id).length;
+  const list=c=>{const l=S.membros.filter(m=>m.categoria===c).sort((a,b)=>(b.ativo!==false)-(a.ativo!==false)||a.nome.localeCompare(b.nome));
+    return l.length?`<ul class="mlist">${l.map(m=>`<li class="${m.ativo===false?'inativo':''}" data-id="${esc(m.id)}"><span class="mn">${esc(m.nome)}${m.diretoria?` <span class="tag d-${esc(m.diretoria)}" style="margin-left:6px">${esc(DIR[m.diretoria]||"")}</span>`:""}</span><span class="muted nw" style="font-size:13px">${cnt(m.id)} particip.</span><span class="mb"><select class="sm" data-mdir aria-label="Diretoria de ${esc(m.nome)}" style="min-height:34px;padding:2px 6px;font-size:14px">${opt("","Sem diretoria",m.diretoria)}${Object.entries(DIR).map(([k,v])=>opt(k,v,m.diretoria)).join("")}</select><button class="btn sm" data-act="link" data-adm style="${m.email?'':'border-color:var(--chart)'}" title="${esc(m.email||'')}">${m.email?'✓ E-mail':'Definir e-mail'}</button><button class="btn sm" data-act="mv-cat" data-adm>${c==='aspira'?'Efetivar':'Tornar aspira'}</button><button class="btn sm" data-act="mv-ativo" data-adm>${m.ativo===false?'Reativar':'Inativar'}</button><button class="btn sm ghost danger" data-act="del-m" data-adm aria-label="Excluir ${esc(m.nome)}">✕</button></span></li>`).join('')}</ul>`:'<div class="empty">Ninguém aqui ainda.</div>'};
+  const ef=S.membros.filter(m=>m.categoria==='efetivo'&&m.ativo!==false).length,as=S.membros.filter(m=>m.categoria==='aspira'&&m.ativo!==false).length;
+  return `<div class="vh"><div><h2>Membros</h2><p>${ef} efetivos e ${as} aspiras ativos · ${S.membros.filter(m=>m.email).length} com e-mail cadastrado. Cada membro entra com esse e-mail Google, vê e edita o painel, e só ele(a) abre a própria Minha área.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap" data-adm><button class="btn" data-act="export">Exportar backup</button><label class="btn" for="imp">Importar backup</label><input type="file" id="imp" accept=".json,application/json" hidden></div></div>
+  <div class="panel" style="margin-bottom:20px" data-adm><h3>Diretoria (acesso total)</h3><p class="cap">Quem está aqui vê e edita todas as abas. Use o e-mail Google da pessoa.</p>
+  <ul class="mlist" style="margin-bottom:10px">${[...ADMIN_EMAILS.map(e=>({id:e,fixo:true})),...S.diretoria.filter(d=>!ADMIN_EMAILS.includes(d.id))].map(d=>`<li data-id="${esc(d.id)}"><span class="mn">${esc(d.id)}</span>${d.fixo?'<span class="muted" style="font-size:13px">fixo na configuração</span>':'<button class="btn sm ghost danger" data-act="del-dir" aria-label="Remover">✕</button>'}</li>`).join('')}</ul>
+  <form class="addm" id="adddir" style="margin:0"><input id="dir-mail" type="email" placeholder="email@gmail.com" aria-label="E-mail do diretor"><button class="btn pri">Adicionar à diretoria</button></form></div>
+  <form class="addm" id="addm" data-adm><input id="m-nome" name="nome" placeholder="Nome do membro" aria-label="Nome do membro"><select id="m-cat" name="categoria" aria-label="Categoria">${opt('efetivo','Efetivo','efetivo')}${opt('aspira','Aspira','')}</select><button class="btn pri">Adicionar</button></form>
+  <div class="mcols"><div><h3 style="margin:0 0 10px">Efetivos</h3>${list('efetivo')}</div><div><h3 style="margin:0 0 10px">Aspiras</h3>${list('aspira')}</div></div>`;
+}
+
+/* ---------- tabbys ---------- */
+const TST={futuro:'Em breve',andamento:'Rolando agora',encerrado:'Encerrado'};
+const safeUrl=u=>{u=String(u||'').trim();if(u&&!/^https?:\/\//i.test(u))u='https://'+u;return /^https:\/\//i.test(u)?u:''};
+function tabbyForm(t={}){
+  const isNew=!t.id;const cs=S.campeonatos.filter(c=>c.nome).sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999'));
+  openModal(isNew?'Adicionar tabby':'Editar tabby',`<div class="fg">
+  <label class="f full">Nome do torneio<input name="nome" id="t-nome" value="${esc(t.nome)}" placeholder="Ex.: IV Mandacaru"></label>
+  <label class="f full">Link do tabby<input name="url" id="t-url" inputmode="url" value="${esc(t.url)}" placeholder="https://mandacaru.calicotab.com/..."></label>
+  <label class="f">Campeonato da planilha<select name="campeonatoId" id="t-camp">${opt('','Nenhum',t.campeonatoId)}${cs.map(c=>opt(c.id,c.nome+(c.inicio?' ('+fmt(c.inicio)+')':''),t.campeonatoId)).join('')}</select></label>
+  <label class="f">Situação<select name="status" id="t-st">${Object.entries(TST).map(([k,v])=>opt(k,v,t.status||'futuro')).join('')}</select></label>
+  <label class="f full">Notas (senha de inscrição, quem lança resultados, etc.)<textarea name="notas" id="t-notas">${esc(t.notas)}</textarea></label></div>`,acts(!isNew),async f=>{
+    const url=safeUrl(f.url);
+    if(!f.nome.trim()){toast('Dê um nome ao torneio.');return false}
+    if(f.url.trim()&&!url){toast('Use um link https://');return false}
+    await save('tabbys',t.id||uid(),{...strip(t),...f,nome:f.nome.trim(),url});toast('Tabby salvo')});
+  if(!isNew)bindDel(()=>del('tabbys',t.id));
+}
+function tCard(t){
+  const c=S.campeonatos.find(x=>x.id===t.campeonatoId),url=safeUrl(t.url);
+  const when=c&&c.inicio?fmtY(c.inicio)+(c.fim&&c.fim!==c.inicio?' a '+fmtY(c.fim):''):'';
+  return `<article class="tcard${t.status==='encerrado'?' enc':''}" data-id="${esc(t.id)}"><div class="row" style="justify-content:space-between"><span class="st ${esc(t.status)}">${esc(TST[t.status]||'')}</span><button class="btn sm ghost" data-act="edit-tabby" data-w>Editar</button></div>
+  <div><h4>${esc(t.nome)}</h4>${when||c?.cidade?`<div class="sub">${esc(when)}${c?.cidade?' · '+esc(c.cidade):''}</div>`:''}</div>
+  ${url?`<div class="url">${esc(url.replace(/^https:\/\//,''))}</div><div class="row"><a class="btn pri sm" href="${esc(url)}" target="_blank" rel="noopener">Abrir tabby ↗</a><button class="btn sm" data-act="copy-tabby" data-url="${esc(url)}">Copiar link</button></div>`:'<div class="sub">Link ainda não cadastrado.</div>'}
+  ${t.notas?`<div class="sub" style="white-space:pre-wrap">${esc(t.notas)}</div>`:''}</article>`;
+}
+function vTabbys(){
+  const ord=t=>{const c=S.campeonatos.find(x=>x.id===t.campeonatoId);return c?.inicio||'9999'};
+  const at=S.tabbys.filter(t=>t.status!=='encerrado').sort((a,b)=>(a.status==='andamento'?0:1)-(b.status==='andamento'?0:1)||ord(a).localeCompare(ord(b)));
+  const en=S.tabbys.filter(t=>t.status==='encerrado').sort((a,b)=>ord(b).localeCompare(ord(a)));
+  return `<div class="vh"><div><h2>Tabbys dos campeonatos</h2><p>Links do Tabbycat de cada torneio: chaves, moções, resultados e breaks num lugar só.</p></div><button class="btn pri" data-act="new-tabby" data-w>+ Adicionar tabby</button></div>
+  <h3 class="secth">Rolando e próximos</h3>${at.length?`<div class="tgrid">${at.map(tCard).join('')}</div>`:'<div class="empty" style="margin-bottom:26px">Nenhum tabby ativo. Adicione o link quando o torneio abrir o tab.</div>'}
+  <h3 class="secth">Encerrados</h3>${en.length?`<div class="tgrid">${en.map(tCard).join('')}</div>`:'<div class="empty">Os tabbys de torneios passados ficam guardados aqui.</div>'}`;
+}
+
+/* ---------- acompanhamento de eventos externos ---------- */
+const ETAPAS=[['inscricao','Inscrição feita'],['taxa','Taxa paga'],['delegacao','Delegação definida'],['juizes','Juízes confirmados'],['transporte','Transporte resolvido'],['hospedagem','Hospedagem resolvida'],['apoio','Apoio / ajuda de custo pedido'],['resultado','Resultados registrados']];
+const acOf=c=>{const a=c.acomp&&typeof c.acomp==='object'?c.acomp:{};return {etapas:{...(a.etapas||{})},notas:Array.isArray(a.notas)?[...a.notas]:[]}};
+function vAcomp(){
+  const L=S.campeonatos.filter(c=>c.nome&&c.status!=='nao'&&(ui.showFim||c.status!=='fim')).sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999'));
+  const card=c=>{const a=acOf(c),done=ETAPAS.filter(([k])=>a.etapas[k]&&a.etapas[k].ok).length,pct=Math.round(done/ETAPAS.length*100);
+    const dd=c.inicio?dias(TODAY,c.inicio):null,przD=c.prazo?dias(TODAY,c.prazo):null;
+    const alerts=[];if(przD!=null&&przD>=0&&przD<=14&&!(a.etapas.inscricao&&a.etapas.inscricao.ok))alerts.push('Inscrição fecha em '+przD+(przD===1?' dia':' dias')+' ('+fmt(c.prazo)+')');
+    if(przD!=null&&przD<0&&!(a.etapas.inscricao&&a.etapas.inscricao.ok)&&c.status!=='fim')alerts.push('Prazo de inscrição já passou ('+fmt(c.prazo)+')');
+    if(dd!=null&&dd>=0&&dd<=21&&done<6)alerts.push('Faltam '+(ETAPAS.length-done)+' etapas e o evento é em '+dd+' dias');
+    const eq=Array.isArray(c.equipe)?c.equipe:[];
+    return `<article class="ac${alerts.length?' urg':''}" data-id="${esc(c.id)}"><header><div><h4>${esc(c.nome)}</h4><div class="sub">${c.inicio?esc(fmtY(c.inicio))+(c.fim&&c.fim!==c.inicio?' a '+esc(fmt(c.fim)):''):'Data a definir'}${c.cidade?' · '+esc(c.cidade):''} · ${esc(campStatus(c)||'Em análise')}</div></div>${dd!=null?`<div class="cd"><strong>${dd<0?'–':dd}</strong><span>${dd<0?'já aconteceu':dd===0?'é hoje':'dias'}</span></div>`:''}</header>
+    ${alerts.map(t=>`<div class="alert">${esc(t)}</div>`).join('')}
+    <div class="pbar"><div class="meter"><i style="width:${pct}%"></i></div><span>${done} de ${ETAPAS.length}</span></div>
+    <ul class="steps">${ETAPAS.map(([k,l])=>{const e=a.etapas[k];return `<li class="${e&&e.ok?'ok':''}"><button data-act="ac-step" data-k="${k}" aria-pressed="${!!(e&&e.ok)}"><span class="bx">${e&&e.ok?'✓':''}</span><span class="t">${l}${e&&e.ok&&e.data?' <small class="muted">'+esc(fmt(e.data))+'</small>':''}</span></button></li>`}).join('')}</ul>
+    <div class="sub">${eq.length?'Equipe: '+eq.map(x=>esc(mname(x.membroId))+(x.funcao?' ('+esc(x.funcao)+')':'')).join(', '):'Equipe ainda não montada.'} <button class="btn sm ghost" data-act="eq">${eq.length?'Editar':'Montar'}</button></div>
+    <div><div class="sub" style="font-weight:700;color:var(--ink);margin-bottom:6px">Atualizações</div>${a.notas.length?`<ul class="log">${a.notas.slice(-4).reverse().map(n=>`<li><b>${esc(fmt(n.data))}</b><span>${esc(n.texto)}${n.por?' <small class="muted">· '+esc(String(n.por).split('@')[0])+'</small>':''}</span></li>`).join('')}</ul>`:'<div class="sub">Nenhuma atualização ainda.</div>'}</div>
+    <form class="acnote" data-id="${esc(c.id)}"><input name="t" placeholder="Ex.: falei com a organização sobre alojamento" aria-label="Nova atualização" maxlength="300"><button class="btn sm pri">Registrar</button></form></article>`};
+  const urg=L.filter(c=>{const p=c.prazo?dias(TODAY,c.prazo):null;return p!=null&&p>=0&&p<=14&&!(acOf(c).etapas.inscricao||{}).ok}).length;
+  return `<div class="vh"><div><h2>Acompanhamento de eventos externos</h2><p>O passo a passo de cada campeonato: inscrição, pagamento, delegação, viagem e resultado. Os eventos vêm da planilha de Campeonatos.</p></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="toggle-fim">${ui.showFim?'Ocultar':'Mostrar'} concluídos</button><a class="btn pri" href="#campeonatos">+ Evento na planilha</a></div></div>
+  ${urg?`<div class="banner">${urg} ${urg>1?'eventos com inscrição fechando':'evento com inscrição fechando'} nos próximos 14 dias.</div>`:''}
+  ${L.length?`<div class="acgrid">${L.map(card).join('')}</div>`:'<div class="empty">Nenhum evento para acompanhar. Adicione campeonatos na aba Campeonatos.</div>'}`;
+}
+
+/* ---------- resultados por campeonato ---------- */
+const FASES=['','Não breakou','Octas','Quartas','Semi','Final','Campeã'];
+const FASE_N={'':-1,'Não breakou':0,'Octas':1,'Quartas':2,'Semi':3,'Final':4,'Campeã':5};
+const norm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\(.*?\)/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const resOf=c=>{const r=c.resultado&&typeof c.resultado==='object'?c.resultado:{};return {oradores:Array.isArray(r.oradores)?r.oradores.map(o=>({...o})):[],equipes:Array.isArray(r.equipes)?r.equipes.map(e=>({...e})):[],totalOradores:r.totalOradores||0,totalEquipes:r.totalEquipes||0,filtro:r.filtro||'UFC',importadoEm:r.importadoEm||''}};
+function guessMember(tabName,pool){
+  const n=norm(tabName);if(!n)return '';const toks=n.split(' ');
+  const cands=pool.filter(m=>{const mt=norm(m.nome).split(' ').filter(Boolean);if(!mt.length)return false;return mt.every(t=>toks.includes(t))});
+  if(cands.length===1)return cands[0].id;
+  const byFirst=pool.filter(m=>norm(m.nome).split(' ')[0]===toks[0]);
+  return byFirst.length===1?byFirst[0].id:'';
+}
+function splitCells(line){return (line.includes('\t')?line.split('\t'):line.split(/\s{2,}/)).map(x=>x.trim()).filter(x=>x!=='')}
+const isNum=x=>/^[=]?-?\d+([.,]\d+)?$/.test(String(x).trim());
+const toNum=x=>parseFloat(String(x).replace('=','').replace(',','.'));
+function tabRows(text){
+  const lines=String(text||'').split(/\r?\n/).map(x=>x.trim());
+  const tabbed=lines.filter(l=>l.includes('\t')||/\S\s{2,}\S/.test(l)).length;
+  if(tabbed>=3)return lines.map(splitCells).filter(c=>c.length>=2);
+  // Formato "uma célula por linha" (copiado do site do Tabbycat no celular ou em alguns navegadores)
+  const L=lines.filter(l=>l!=='');const rows=[];let cur=null;
+  for(let i=0;i<L.length;i++){const l=L[i],nx=L[i+1]||'';
+    if(/^=?\d+=?$/.test(l)&&/[A-Za-zÀ-ú]/.test(nx)&&!/^novice$/i.test(nx)){if(cur)rows.push(cur);cur=[l.replace(/=/g,'')];continue}
+    if(cur){if(/runs on Tabbycat/i.test(l)){rows.push(cur);cur=null;break}cur.push(l)}}
+  if(cur)rows.push(cur);return rows;
+}
+function parseTab(text,filtro,kind){
+  const f=norm(filtro);let maxRank=0;const out=[];
+  tabRows(text).forEach(cells=>{
+    const line=cells.join(' ');
+    const r=isNum(cells[0])?toNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<5000)maxRank=r;
+    if(f&&!norm(line).includes(f))return;
+    let i=isNaN(r)?0:1;while(i<cells.length&&isNum(cells[i]))i++;
+    const nome=cells[i]||'';if(!/[a-zA-ZÀ-ú]/.test(nome))return;
+    let j=i+1;while(j<cells.length&&(isNum(cells[j])||!/[a-zA-ZÀ-ú]/.test(cells[j])||/^novice$/i.test(cells[j])))j++;
+    const equipe=j<cells.length?cells[j]:'';
+    const nums=cells.slice(i+1).filter(isNum).map(toNum);
+    if(kind==='oradores'){
+      const ints=cells.slice(i+1).filter(c=>isNum(c)&&!/[.,]/.test(c)).map(toNum).filter(x=>x>=50&&x<=100);
+      const last=[...cells].reverse().find(c=>isNum(c)&&toNum(c)>=50&&toNum(c)<=100);
+      const media=last&&/[.,]/.test(last)?toNum(last):(ints.length?Math.round(ints.reduce((a,b)=>a+b,0)/ints.length*100)/100:null);
+      out.push({nome,equipe,posicao:isNaN(r)?null:r,media,rodadas:ints.length,novice:/\bnovice\b/i.test(line)});
+    }else{out.push({nome,posicao:isNaN(r)?null:r,pontos:nums.length?nums[0]:null,speaks:nums.length>1?nums[1]:null,fase:''})}
+  });
+  return {rows:out,max:maxRank};
+}
+function importForm(c){
+  const R=resOf(c);const pool=S.membros.filter(m=>m.ativo!==false);
+  openModal('Importar resultado: '+(c.nome||''),`<p class="muted" style="margin:0 0 10px;font-size:14px">No tabby do torneio, abra o <b>Speaker tab</b> (ou "Tab de oradores"), selecione a tabela inteira, copie (Ctrl+C) e cole abaixo. Repita com o <b>Team tab</b>, se ele estiver publicado. O painel acha as linhas da SdD e liga cada orador a um membro.</p>
+  <label class="f">Como a SdD aparece no tab (instituição ou nome das equipes)<input id="im-f" value="${esc(R.filtro)}" placeholder="Ex.: UFC"></label>
+  <label class="f" style="margin-top:10px">Speaker tab (oradores)<textarea id="im-sp" rows="5" placeholder="Cole aqui a tabela de oradores"></textarea></label>
+  <label class="f" style="margin-top:10px">Team tab (equipes), opcional<textarea id="im-tm" rows="4" placeholder="Cole aqui a tabela de equipes"></textarea></label>
+  <button type="button" class="btn" id="im-go" style="margin-top:10px">Ler tabelas</button><div id="im-prev" style="margin-top:12px"></div>`,acts(false),async()=>{
+    if(!importForm.data){toast('Cole as tabelas e toque em "Ler tabelas" primeiro.');return false}
+    const d=importForm.data;d.oradores.forEach((o,i)=>{const s=document.getElementById('im-m-'+i);o.membroId=s?s.value:''});
+    const keep=d.oradores.filter(o=>o.membroId);
+    if(!keep.length&&!d.equipes.length){toast('Nenhum orador ligado a membro.');return false}
+    const old=resOf(c);d.equipes.forEach(e=>{const o=old.equipes.find(x=>norm(x.nome)===norm(e.nome));if(o&&o.fase)e.fase=o.fase});
+    await patch('campeonatos',c.id,{resultado:JSON.parse(JSON.stringify({oradores:keep,equipes:d.equipes,totalOradores:d.totalOradores,totalEquipes:d.totalEquipes,filtro:d.filtro,importadoEm:TODAY}))});importForm.data=null;toast('Resultado importado');ui.resCamp=c.id;location.hash='resultados'});
+  importForm.data=null;
+  $('#im-go').onclick=()=>{
+    const filtro=$('#im-f').value.trim();const sp=parseTab($('#im-sp').value,filtro,'oradores'),tm=parseTab($('#im-tm').value,filtro,'equipes');
+    sp.rows.forEach(o=>{o.membroId=guessMember(o.nome,pool)});
+    importForm.data={oradores:sp.rows,equipes:tm.rows,totalOradores:sp.max,totalEquipes:tm.max,filtro};
+    $('#im-prev').innerHTML=(sp.rows.length?`<b style="font-size:15px">${sp.rows.length} orador(es) encontrados${sp.max?' de '+sp.max:''}</b><div style="overflow-x:auto"><table class="rank"><thead><tr><th>No tab</th><th>Equipe</th><th class="n">Pos.</th><th class="n">Média</th><th>Membro</th></tr></thead><tbody>${sp.rows.map((o,i)=>`<tr><td>${esc(o.nome)}</td><td>${esc(o.equipe)}</td><td class="n">${o.posicao??'–'}</td><td class="n">${f1(o.media)}</td><td><select id="im-m-${i}" style="min-height:34px;font-size:14px">${opt('','Não é membro / ignorar',o.membroId)}${pool.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(m=>opt(m.id,m.nome,o.membroId)).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:'<div class="banner">Nenhum orador da SdD encontrado. Confira se colou a tabela de oradores e se o texto do filtro (ex.: UFC) aparece nas linhas.</div>')
+      +(tm.rows.length?`<p style="margin:10px 0 0;font-size:14px"><b>${tm.rows.length} equipe(s) da SdD</b>${tm.max?' de '+tm.max:''}: ${tm.rows.map(e=>esc(e.nome)+(e.posicao?' ('+e.posicao+'º)':'')).join(', ')}</p>`:'');
+  };
+}
+function campRegs(c){return S.registros.filter(r=>r.campeonatoId===c.id||(r.contexto==='campeonato'&&!r.campeonatoId&&c.nome&&norm(r.evento)===norm(c.nome)))}
+function campSummary(c){
+  const R=resOf(c),regs=campRegs(c).filter(r=>r.funcao==='debatedor');
+  const best=R.equipes.filter(e=>e.posicao).sort((a,b)=>a.posicao-b.posicao)[0];
+  const fase=R.equipes.reduce((m,e)=>FASE_N[e.fase]>FASE_N[m]?e.fase:m,'');
+  const brk=R.equipes.filter(e=>FASE_N[e.fase]>=1).length;
+  const sp=R.oradores.map(o=>o.media).filter(x=>x!=null);const spR=regs.map(r=>Number(r.speaks)).filter(x=>x>0);
+  const media=sp.length?avg(sp):spR.length?avg(spR):null;
+  const bestSp=R.oradores.filter(o=>o.posicao).sort((a,b)=>a.posicao-b.posicao)[0];
+  const duplas=R.equipes.length||new Set(regs.map(r=>r.salaId+'|'+r.casa)).size&&Math.round(new Set(regs.map(r=>r.membroId)).size/2);
+  return {R,regs,best,fase,brk,media,bestSp,duplas,tem:R.oradores.length||R.equipes.length||regs.length};
+}
+function vResultados(){
+  const L=S.campeonatos.filter(c=>c.nome&&c.status!=='nao'&&(c.status==='fim'||(c.inicio&&c.inicio<=TODAY)||resOf(c).oradores.length||campRegs(c).length)).sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
+  const sel=L.find(c=>c.id===ui.resCamp);
+  if(sel)return resDetail(sel);
+  const rows=L.map(c=>{const s=campSummary(c);return `<tr data-id="${esc(c.id)}"><td><button class="ttl" data-act="res-open">${esc(c.nome)}</button><div class="muted" style="font-size:13px">${c.inicio?esc(fmtY(c.inicio)):''}${c.cidade?' · '+esc(c.cidade):''}</div></td><td class="n">${s.duplas||'–'}</td><td class="n">${s.best?esc(s.best.posicao)+'º'+(s.R.totalEquipes?' / '+s.R.totalEquipes:''):'–'}</td><td>${s.fase&&s.fase!=='Não breakou'?esc(s.fase)+(s.brk>1?' ('+s.brk+' equipes)':''):s.fase?'Não breakou':'–'}</td><td class="n">${f1(s.media)}</td><td class="hide-s">${s.bestSp?esc(mname(s.bestSp.membroId))+' ('+esc(s.bestSp.posicao)+'º)':'–'}</td><td class="n hide-s">${s.tem?(s.R.importadoEm?'tab':'salas'):'<span class="muted">sem dados</span>'}</td></tr>`}).join('');
+  const comp=L.map(c=>({c,s:campSummary(c)})).filter(x=>x.s.media!=null).reverse();
+  const mx=Math.max(80,...comp.map(x=>x.s.media)),mn=Math.min(70,...comp.map(x=>x.s.media));
+  return `<div class="vh"><div><h2>Resultados por campeonato</h2><p>Como a delegação foi em cada torneio. Importe direto do tabby ou use as salas registradas com o campeonato.</p></div></div>
+  ${comp.length>1?`<div class="panel" style="margin-bottom:20px"><h3>Speaks médios da delegação por campeonato</h3><p class="cap">Do mais antigo ao mais recente</p>${comp.map(x=>`<div class="hb" style="grid-template-columns:minmax(6em,12em) minmax(0,1fr) 3.4em"><b style="text-align:left;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.c.nome)}</b><div class="tr"><i style="width:${Math.max(4,(x.s.media-mn+1)/(mx-mn+1)*100)}%"></i></div><b>${f1(x.s.media)}</b></div>`).join('')}</div>`:''}
+  ${L.length?`<div class="panel"><div style="overflow-x:auto"><table class="rank"><thead><tr><th>Campeonato</th><th class="n">Duplas</th><th class="n">Melhor equipe</th><th>Break</th><th class="n">Speaks</th><th class="hide-s">Melhor orador</th><th class="n hide-s">Fonte</th></tr></thead><tbody>${rows}</tbody></table></div></div>`:'<div class="empty">Os campeonatos aparecem aqui depois que acontecem. Cadastre-os na aba Campeonatos.</div>'}`;
+}
+function resDetail(c){
+  const s=campSummary(c),R=s.R;
+  const regsBy={};s.regs.forEach(r=>{(regsBy[r.membroId]=regsBy[r.membroId]||[]).push(r)});
+  const salas=new Set(s.regs.map(r=>r.salaId)).size;
+  const membros=[...new Set([...R.oradores.map(o=>o.membroId),...Object.keys(regsBy)])].filter(Boolean);
+  const linhas=membros.map(id=>{const o=R.oradores.find(x=>x.membroId===id)||{};const rg=regsBy[id]||[];const p=rg.map(ptsOf).filter(x=>x!=null);
+    return {id,nome:mname(id),equipe:o.equipe||'',pos:o.posicao||null,media:o.media??avg(rg.map(r=>Number(r.speaks)).filter(x=>x>0)),rod:o.rodadas||rg.length||null,pts:avg(p),pri:rg.filter(r=>Number(r.colocacao)===1).length}}).sort((a,b)=>(a.pos||9999)-(b.pos||9999)||(b.media||0)-(a.media||0));
+  const casa=CASAS.map(cs=>{const t={};s.regs.filter(r=>r.casa===cs&&r.colocacao).forEach(r=>t[r.salaId]=ptsOf(r));const v=Object.values(t);return [cs,avg(v),v.length]});
+  return `<div class="vh"><div><button class="btn sm ghost" data-act="res-back">‹ Todos os campeonatos</button><h2 style="margin-top:6px">${esc(c.nome)}</h2><p>${c.inicio?esc(fmtY(c.inicio)):''}${c.cidade?' · '+esc(c.cidade):''}${R.importadoEm?' · tab importado em '+esc(fmt(R.importadoEm)):''}</p></div><button class="btn pri" data-act="res-import">${R.importadoEm?'Reimportar do tabby':'Importar do tabby'}</button></div>
+  <div class="sumrow"><div class="stat"><strong>${s.duplas||'–'}</strong><span>duplas da SdD</span></div><div class="stat"><strong>${s.best?esc(s.best.posicao)+'º':'–'}</strong><span>melhor equipe${R.totalEquipes?' de '+R.totalEquipes:''}</span></div><div class="stat"><strong>${s.bestSp?esc(s.bestSp.posicao)+'º':'–'}</strong><span>melhor orador${R.totalOradores?' de '+R.totalOradores:''}</span></div><div class="stat"><strong>${f1(s.media)}</strong><span>speaks médios da delegação</span></div></div>
+  ${R.equipes.length?`<div class="panel" style="margin-bottom:20px"><h3>Equipes</h3><p class="cap">Marque até onde cada equipe chegou no break</p><div style="overflow-x:auto"><table class="rank"><thead><tr><th>Equipe</th><th class="n">Posição</th><th class="n">Pontos</th><th class="n">Speaks</th><th>Break</th></tr></thead><tbody>${R.equipes.map((e,i)=>`<tr><td>${esc(e.nome)}</td><td class="n">${e.posicao?esc(e.posicao)+'º':'–'}</td><td class="n">${e.pontos??'–'}</td><td class="n">${e.speaks??'–'}</td><td><select data-fase="${i}" style="min-height:34px;font-size:14px">${FASES.map(fz=>opt(fz,fz||'—',e.fase||'')).join('')}</select></td></tr>`).join('')}</tbody></table></div></div>`:''}
+  <div class="grid2"><div class="panel"><h3>Oradores da SdD</h3><p class="cap">${R.oradores.length?'Do tab do torneio'+(s.regs.length?' e das salas registradas':''):'Das salas registradas'}</p>
+  ${linhas.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th>Membro</th><th class="n">Pos.</th><th class="n">Média</th><th class="n">Rodadas</th>${s.regs.length?'<th class="n">Pts/sala</th>':''}</tr></thead><tbody>${linhas.map(l=>`<tr><td>${esc(l.nome)}${l.equipe?`<div class="muted" style="font-size:12.5px">${esc(l.equipe)}</div>`:''}</td><td class="n">${l.pos?esc(l.pos)+'º':'–'}</td><td class="n">${f1(l.media)}</td><td class="n">${l.rod??'–'}</td>${s.regs.length?`<td class="n">${f1(l.pts)}</td>`:''}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sem dados ainda. Importe o tab do torneio, ou registre as salas na aba Desempenho escolhendo este campeonato.</div>'}</div>
+  <div class="panel"><h3>Por casa</h3><p class="cap">${salas?'Pontos médios por posição, nas '+salas+' salas registradas':'Registre as salas deste campeonato na aba Desempenho para ver o rendimento por casa'}</p>${salas?casa.map(([cs,v,n])=>`<div class="hb"><b style="text-align:left">${cs}</b><div class="tr"><i style="width:${v==null?0:v/3*100}%"></i></div><b>${f1(v)}</b></div>`).join(''):''}</div></div>`;
+}
+
+/* ---------- minha área ---------- */
+const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
+const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function buildResumo(id){
+  const m=mem(id);if(!m)return null;
+  const mine=S.registros.filter(r=>r.membroId===id),d=mine.filter(r=>r.funcao==='debatedor');
+  const ano=new Date().getFullYear()+'-01-01',first=m.nome.split(' ')[0].toLowerCase();
+  const dem=S.demandas.filter(x=>x.status!=='concluida'&&x.responsavel&&x.responsavel.toLowerCase().split(/\s*(?:,|\/|&|\se\s)\s*/).some(n=>n.trim()===m.nome.toLowerCase()||n.trim()===first)).sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999')).map(x=>({titulo:x.titulo||'',diretoria:x.diretoria||'',prazo:x.prazo||'',status:x.status||''}));
+  const camps=S.campeonatos.filter(c=>((Array.isArray(c.equipe)&&c.equipe.some(x=>x.membroId===id))||resOf(c).oradores.some(x=>x.membroId===id))&&c.status!=='nao').sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999')).map(c=>{const o=resOf(c).oradores.find(x=>x.membroId===id);const tot=resOf(c).totalOradores;return {nome:c.nome||'',inicio:c.inicio||'',fim:c.fim||'',cidade:c.cidade||'',funcao:(Array.isArray(c.equipe)?c.equipe:[]).filter(x=>x.membroId===id).map(x=>x.funcao).filter(Boolean).join(', ')||(o?'Debatedor(a)':''),res:o?(o.posicao?o.posicao+'º orador'+(tot?' de '+tot:''):'')+(o.media!=null?(o.posicao?', ':'')+'média '+String(o.media).replace('.',','):''):''}});
+  const r1=v=>v==null?null:Math.round(v*10)/10;
+  return {nome:m.nome,categoria:m.categoria,
+    stats:{deb:d.length,dAno:d.filter(r=>r.data>=ano).length,pts:r1(avg(d.map(ptsOf).filter(x=>x!=null))),spk:r1(avg(d.map(r=>Number(r.speaks)).filter(x=>x>0))),last:mine.reduce((a,r)=>r.data>a?r.data:a,'')},
+    casas:CASAS.map(c=>({casa:c,v:r1(avg(d.filter(r=>r.casa===c).map(ptsOf).filter(x=>x!=null)))})),
+    recent:[...d].sort((a,b)=>b.data.localeCompare(a.data)).slice(0,6).map(r=>({data:r.data,evento:r.evento||CTX[r.contexto]||'',casa:r.casa||'',colocacao:r.colocacao||'',speaks:r.speaks||''})),
+    diretoria:m.diretoria||'',dirDem:m.diretoria?S.demandas.filter(x=>x.diretoria===m.diretoria&&x.status!=='concluida'&&!dem.some(y=>y.titulo===x.titulo)).sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999')).slice(0,8).map(x=>({titulo:x.titulo||'',diretoria:x.diretoria,prazo:x.prazo||'',status:x.status||'',responsavel:x.responsavel||''})):[],
+    demandas:dem,camps,
+    eventos:allItems().filter(i=>(i.f||i.d)>=TODAY).slice(0,6).map(i=>({titulo:i.t,data:i.d,fim:i.f||'',sub:i.s})),
+    tabbys:S.tabbys.filter(t=>t.status!=='encerrado'&&safeUrl(t.url)).map(t=>({nome:t.nome||'',url:safeUrl(t.url),status:t.status||''}))};
+}
+function dirPick(R){return `<label class="f" style="max-width:260px">Minha diretoria<select id="my-dir" data-mydir>${opt('','Nenhuma',R.diretoria)}${Object.entries(DIR).map(([k,v])=>opt(k,v,R.diretoria)).join('')}</select></label>`}
+function areaHtml(R,pick){
+  const s=R.stats,last=s.last;
+  return `<div class="vh"><div><h2>Olá, ${esc(R.nome.split(' ')[0])}</h2><p>${R.categoria==='aspira'?'Aspira':'Efetivo(a)'} da SdDUFC${R.diretoria?' · Diretoria '+esc(DIR[R.diretoria]||''):''}</p></div>${pick||''}</div>
+  <div class="sumrow"><div class="stat"><strong>${s.deb}</strong><span>debates registrados (${s.dAno} este ano)</span></div><div class="stat"><strong>${f1(s.pts)}</strong><span>pontos médios por sala</span></div><div class="stat"><strong>${f1(s.spk)}</strong><span>speaks médio</span></div><div class="stat"><strong style="${!last||dias(last,TODAY)>30?'color:var(--acc)':''}">${last?esc(fmt(last)):'–'}</strong><span>última participação</span></div></div>
+  <div class="grid2"><div class="panel"><h3>Meus campeonatos</h3><p class="cap">Onde você está na equipe da SdD</p>${R.camps.length?`<ul class="up">${R.camps.map(c=>`<li><button type="button"><span class="dt">${c.inicio?esc(fmt(c.inicio)):'–'}<small>${c.inicio&&c.inicio>=TODAY?'em '+dias(TODAY,c.inicio)+' d':''}</small></span><span><span class="nm">${esc(c.nome)}</span><span class="sub">${esc(c.funcao||'Função a definir')}${c.cidade?' · '+esc(c.cidade):''}${c.res?' · <b>'+esc(c.res)+'</b>':''}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Você ainda não está em nenhuma equipe.</div>'}</div>
+  <div class="panel"><h3>Minhas demandas</h3><p class="cap">Pendências em que você é responsável</p>${R.demandas.length?`<ul class="tlist">${R.demandas.map(x=>{const late=x.prazo&&x.prazo<TODAY;return `<li class="task d-${esc(x.diretoria)}" style="grid-template-columns:minmax(0,1fr)"><div><b>${esc(x.titulo)}</b><div class="meta"><span class="tag d-${esc(x.diretoria)}">${esc(DIR[x.diretoria]||'')}</span>${x.status==='andamento'?'<span class="prog">em andamento</span>':''}${x.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(x.prazo))}</span>`:''}</div></div></li>`}).join('')}</ul>`:'<div class="empty">Nada pendente com seu nome.</div>'}</div></div>
+  <div class="grid2"><div class="panel"><h3>Últimos debates</h3><p class="cap">Casa, colocação e speaks</p>${R.recent.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th>Data</th><th>Evento</th><th>Casa</th><th class="n">Coloc.</th><th class="n">Speaks</th></tr></thead><tbody>${R.recent.map(r=>`<tr><td class="nw">${esc(fmt(r.data))}</td><td>${esc(r.evento)}</td><td>${esc(r.casa)}</td><td class="n">${r.colocacao?esc(r.colocacao)+'º':'–'}</td><td class="n">${r.speaks?esc(r.speaks):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum debate registrado ainda.</div>'}</div>
+  <div class="panel"><h3>Meus pontos por casa</h3><p class="cap">Média de pontos por sala em cada posição</p>${(R.casas||[]).map(o=>Array.isArray(o)?{casa:o[0],v:o[1]}:o).map(({casa:c,v})=>`<div class="hb"><b style="text-align:left">${esc(c)}</b><div class="tr"><i style="width:${v==null?0:Math.min(100,v/3*100)}%"></i></div><b>${f1(v)}</b></div>`).join('')}</div></div>
+  ${R.diretoria?`<div class="panel" style="margin-bottom:20px"><h3>Pendências da ${esc(DIR[R.diretoria]||'')}</h3><p class="cap">O que a sua diretoria ainda tem para entregar</p>${(R.dirDem||[]).length?`<ul class="tlist">${R.dirDem.map(x=>{const late=x.prazo&&x.prazo<TODAY;return `<li class="task d-${esc(x.diretoria)}" style="grid-template-columns:minmax(0,1fr)"><div><b>${esc(x.titulo)}</b><div class="meta">${x.responsavel?`<span>${esc(x.responsavel)}</span>`:''}${x.status==='andamento'?'<span class="prog">em andamento</span>':''}${x.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(x.prazo))}</span>`:''}</div></div></li>`}).join('')}</ul>`:'<div class="empty">Nada pendente na sua diretoria.</div>'}</div>`:''}
+  <div class="grid2"><div class="panel"><h3>Agenda da SdD</h3><p class="cap">Próximos treinos, reuniões e campeonatos</p>${R.eventos.length?`<ul class="up">${R.eventos.map(i=>`<li><button type="button"><span class="dt">${esc(fmt(i.data))}<small>${dias(TODAY,i.data)<=0?'agora':'em '+dias(TODAY,i.data)+' d'}</small></span><span><span class="nm">${esc(i.titulo)}</span><span class="sub">${esc(i.sub)}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Nada marcado.</div>'}</div>
+  <div class="panel"><h3>Tabbys abertos</h3><p class="cap">Chaves e resultados dos torneios</p>${R.tabbys.length?R.tabbys.map(t=>{const u=safeUrl(t.url);return u?`<div class="row" style="display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><b>${esc(t.nome)}</b><a class="btn pri sm" href="${esc(u)}" target="_blank" rel="noopener">Abrir ↗</a></div>`:''}).join(''):'<div class="empty">Nenhum tabby aberto agora.</div>'}</div></div>`;
+}
+let MYAREA=undefined;
+const myMember=()=>S.membros.find(m=>m.email&&m.email===ME);
+function vEu(){
+  if(!ADMIN){
+    const me=myMember();
+    if(!me)return `<div class="vh"><div><h2>Minha área</h2><p>Carregando…</p></div></div>`;
+    return areaHtml(buildResumo(me.id),dirPick(buildResumo(me.id)));
+  }
+  const id=ui.eu||lsGet('sdd-eu');const R=buildResumo(id);
+  const pick=`<label class="f" style="max-width:340px">Ver a área de<select id="eu-sel" data-eu>${memOpts(id,'Escolha um membro')}</select></label>`;
+  if(!R)return `<div class="vh"><div><h2>Minha área</h2><p>Escolha um membro para ver a área exatamente como ele(a) vê.</p></div>${pick}</div>`;
+  const m=mem(id);
+  return `<div class="banner" style="background:var(--panel);border-color:var(--line)">${m.email?'Só '+esc(m.nome)+' abre esta área, entrando com '+esc(m.email)+'. A diretoria também pode ver por aqui.':'Este membro ainda não tem e-mail cadastrado. Cadastre na aba Membros para ele(a) ter acesso.'}</div>`+areaHtml(R,pick);
+}
+
+/* ---------- vínculo de contas e sincronização ---------- */
+let CANEDIT=false,ME='';const lastSync={};let syncT=null,syncing=false,syncPrimed=false;
+const ADMIN_EMAILS=((window.SDD_CONFIG&&window.SDD_CONFIG.adminEmails)||[]).map(e=>String(e).trim().toLowerCase());
+const okMail=e=>/^[^\s@\/]+@[^\s@\/]+\.[^\s@\/]+$/.test(e);
+function linkForm(m){
+  openModal('E-mail de '+m.nome,`<p class="muted" style="margin:0 0 10px;font-size:14px">O e-mail da conta Google com que ${esc(m.nome)} vai entrar no painel. Com ele, a pessoa entra no painel, pode ver e editar tudo, e só ela abre a própria Minha área.</p><label class="f">E-mail<input type="email" name="email" id="lk-mail" value="${esc(m.email)}" placeholder="nome@gmail.com"></label>`,acts(!!m.email),async f=>{
+    const e=(f.email||'').trim().toLowerCase();
+    if(e&&!okMail(e)){toast('E-mail inválido.');return false}
+    const dup=e&&S.membros.find(x=>x.email===e&&x.id!==m.id);if(dup){toast('Esse e-mail já é de '+dup.nome);return false}
+    await patch('membros',m.id,{email:e});toast(e?'E-mail salvo':'E-mail removido');scheduleSync()});
+  bindDel(async()=>{await patch('membros',m.id,{email:''});scheduleSync()});
+}
+function scheduleSync(){if(!CANEDIT||!db)return;clearTimeout(syncT);syncT=setTimeout(doSync,2000)}
+async function doSync(){
+  if(syncing){scheduleSync();return}syncing=true;
+  try{
+    const want={};S.membros.forEach(m=>{if(m.email&&m.ativo!==false)want[m.email]=m.id});
+    for(const [e,mid] of Object.entries(want)){const cur=S.acesso.find(a=>a.id===e);if(!cur||cur.membroId!==mid)await db.collection('acesso').doc(e).set({membroId:mid})}
+    for(const a of S.acesso){if(!want[a.id])await db.collection('acesso').doc(a.id).delete()}
+  }catch(e){console.warn('sync',e);toast('Não consegui atualizar os acessos: '+(e&&e.message||e))}finally{syncing=false}
+}
+
+/* ---------- render & eventos ---------- */
+const V={eu:vEu,resultados:vResultados,acompanhamento:vAcomp,demandas:vDemandas,calendario:vCalendario,campeonatos:vCampeonatos,tabbys:vTabbys,desempenho:vDesempenho,membros:vMembros};
+const cur=()=>V[location.hash.slice(1)]?location.hash.slice(1):(ADMIN?'demandas':'eu');
+function render(force){
+  const a=document.activeElement;
+  if(!force&&a&&view.contains(a)&&/INPUT|SELECT|TEXTAREA/.test(a.tagName)){pending=true;return}
+  if(!force&&modalOpen){pending=true;return}
+  pending=false;const k=cur();
+  document.querySelectorAll('#tabs a').forEach(t=>t.getAttribute('href')==='#'+k?t.setAttribute('aria-current','page'):t.removeAttribute('aria-current'));
+  try{view.innerHTML=V[k]()}catch(e){view.innerHTML='<div class="empty">Algo deu errado ao montar esta aba.</div>';console.error(e)}
+}
+view.addEventListener('focusout',()=>{if(pending)setTimeout(()=>{if(pending)render()},60)});
+window.addEventListener('hashchange',()=>{render(true);window.scrollTo(0,0)});
+
+view.addEventListener('click',async e=>{
+  const dd=e.target.closest('[data-dir]');if(dd){ui.dir=dd.dataset.dir===ui.dir&&dd.classList.contains('dcard')?'todas':dd.dataset.dir;render(true);return}
+  const so=e.target.closest('[data-sort]');if(so){ui.sort=so.dataset.sort;render(true);return}
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const act=b.dataset.act,row=b.closest('[data-id]'),id=b.dataset.id||row?.dataset.id;
+  if(act==='copy-tabby'){try{await navigator.clipboard.writeText(b.dataset.url);toast('Link copiado')}catch(err){toast('Não deu para copiar. Segure o link para copiar.')}return}
+  if(RO&&!/^(cal-|toggle-fim|goto-camp|eq-view)/.test(act)){toast('Só a diretoria edita o painel.');return}
+  if(!ADMIN&&['export','del-dir','link','mv-cat','mv-ativo','del-m'].includes(act)){toast('Só a diretoria mexe na lista de membros.');return}
+  if(act==='eq-view'){const c=S.campeonatos.find(x=>x.id===id);const eq=(c?.equipe||[]);openModal('Equipe: '+(c?.nome||''),eq.length?`<ul style="margin:0;padding-left:18px">${eq.map(x=>`<li><b>${esc(mname(x.membroId))}</b>${x.funcao?' · '+esc(x.funcao):''}</li>`).join('')}</ul>`:'<p class="muted">Equipe ainda não definida.</p>','<button type="button" class="btn" data-m="cancel">Fechar</button>',null);return}
+  if(act==='eu-set')return;
+  if(act==='new-tabby')tabbyForm();
+  else if(act==='export'){const out={exportadoEm:TODAY};COLS.filter(c=>c!=='diretoria').forEach(c=>out[c]=S[c]);const blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sdd-backup-'+TODAY+'.json';document.body.appendChild(a);a.click();a.remove();toast('Backup baixado')}
+  else if(act==='del-dir'){confirmDel('Tirar '+id+' da diretoria? A pessoa perde o acesso às abas de gestão.',()=>del('diretoria',id))}
+  else if(act==='link'){const m=mem(id);if(m)linkForm(m)}
+  else if(act==='res-open'){ui.resCamp=id;render(true);window.scrollTo(0,0)}
+  else if(act==='res-back'){ui.resCamp='';render(true)}
+  else if(act==='res-import'){const c=S.campeonatos.find(x=>x.id===ui.resCamp);if(c)importForm(c)}
+  else if(act==='ac-step'){const c=S.campeonatos.find(x=>x.id===id);if(!c)return;const a=acOf(c),k=b.dataset.k,on=!(a.etapas[k]&&a.etapas[k].ok);a.etapas[k]={ok:on,data:on?TODAY:'',por:ME};await patch('campeonatos',id,{acomp:a})}
+  else if(act==='eq'){const c=S.campeonatos.find(x=>x.id===id);if(c)equipeForm(c)}
+  else if(act==='edit-tabby'){const t=S.tabbys.find(x=>x.id===id);if(t)tabbyForm(t)}
+  else if(act==='new-d')demandaForm();
+  else if(act==='edit')demandaForm(S.demandas.find(d=>d.id===id));
+  else if(act==='toggle'){const d=S.demandas.find(x=>x.id===id);if(d){const done=d.status==='concluida';await patch('demandas',id,{status:done?'afazer':'concluida',concluidaEm:done?'':TODAY});if(!done)toast('Concluída!')}}
+  else if(act==='cal-prev'||act==='cal-next'){const s=act==='cal-prev'?-1:1;if(ui.calMode==='ano')ui.calY+=s;else{ui.calM+=s;if(ui.calM<0){ui.calM=11;ui.calY--}if(ui.calM>11){ui.calM=0;ui.calY++}}render(true)}
+  else if(act==='cal-hoje'){ui.calY=new Date().getFullYear();ui.calM=new Date().getMonth();render(true)}
+  else if(act==='cal-mode'){ui.calMode=b.dataset.v;render(true)}
+  else if(act==='edit-ev'){e.stopPropagation();const ev=S.eventos.find(x=>x.id===id);if(ev)eventoForm(ev)}
+  else if(act==='goto-camp'){e.stopPropagation();location.hash='campeonatos'}
+  else if(act==='new-ev')eventoForm({data:b.dataset.day});
+  else if(act==='new-camp'){const nid=uid();await save('campeonatos',nid,{nome:'',status:'analise',formato:'BP'});setTimeout(()=>{const i=document.getElementById('c-'+nid+'-nome');i&&i.focus()},120)}
+  else if(act==='del-camp'){const c=S.campeonatos.find(x=>x.id===id);confirmDel('Excluir “'+(c?.nome||'linha sem nome')+'” da planilha?',()=>del('campeonatos',id))}
+  else if(act==='toggle-fim'){ui.showFim=!ui.showFim;render(true)}
+  else if(act==='new-sala')salaForm();
+  else if(act==='del-sala'){const rs=S.registros.filter(r=>r.salaId===id);confirmDel('Excluir esta sala e suas '+rs.length+' participações?',()=>Promise.all(rs.map(r=>del('registros',r.id))))}
+  else if(act==='mv-cat'){const m=mem(id);patch('membros',id,{categoria:m.categoria==='aspira'?'efetivo':'aspira'})}
+  else if(act==='mv-ativo'){const m=mem(id);patch('membros',id,{ativo:m.ativo===false})}
+  else if(act==='del-m'){const m=mem(id);confirmDel('Excluir '+m.nome+'? Os registros de desempenho dele(a) ficam sem nome. Para quem saiu, prefira “Inativar”.',()=>del('membros',id))}
+});
+function confirmDel(msg,fn){openModal('Confirmar exclusão',`<p style="margin:0">${esc(msg)}</p>`,'<button type="button" class="btn" data-m="cancel">Cancelar</button><button class="btn pri">Excluir</button>',async()=>{await fn();toast('Excluído')})}
+view.addEventListener('input',e=>{if(e.target.id==='busca'){ui.busca=e.target.value;const l=$('#dlists');if(l)l.innerHTML=dLists()}});
+view.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset.fase!==undefined){const c=S.campeonatos.find(x=>x.id===ui.resCamp);if(c){const r=resOf(c);const e=r.equipes[Number(t.dataset.fase)];if(e){e.fase=t.value;patch('campeonatos',c.id,{resultado:JSON.parse(JSON.stringify({...r}))})}}return}
+  if(t.dataset.mydir!==undefined){const me=myMember();if(me){patch('membros',me.id,{diretoria:t.value});toast(t.value?'Diretoria salva: '+DIR[t.value]:'Diretoria removida')}return}
+  if(t.dataset.mdir!==undefined){const li=t.closest('[data-id]');if(li&&ADMIN)patch('membros',li.dataset.id,{diretoria:t.value});return}
+  if(t.dataset.eu!==undefined){ui.eu=t.value;lsSet('sdd-eu',t.value);render(true);return}
+  if(t.dataset.filter){ui[t.dataset.filter]=t.value;render(true);return}
+  if(t.dataset.f){const row=t.closest('tr[data-id]');if(!row)return;let v=t.value;if(t.type==='number')v=v===''?'':Number(v);patch('campeonatos',row.dataset.id,{[t.dataset.f]:v})}
+});
+view.addEventListener('submit',async e=>{if(!e.target.classList.contains('acnote'))return;e.preventDefault();const t=(e.target.t.value||'').trim();if(!t)return;const c=S.campeonatos.find(x=>x.id===e.target.dataset.id);if(!c)return;const a=acOf(c);a.notas.push({data:TODAY,texto:t,por:ME});if(a.notas.length>40)a.notas=a.notas.slice(-40);await patch('campeonatos',c.id,{acomp:a});toast('Atualização registrada')});
+view.addEventListener('submit',async e=>{if(e.target.id!=='adddir')return;e.preventDefault();const v=$('#dir-mail').value.trim().toLowerCase();if(!okMail(v)){toast('E-mail inválido.');return}await save('diretoria',v,{adicionadoEm:TODAY,por:ME});toast(v+' agora é da diretoria')});
+view.addEventListener('change',async e=>{if(e.target.id!=='imp')return;const f=e.target.files&&e.target.files[0];if(!f)return;let data;try{data=JSON.parse(await f.text())}catch(err){toast('Arquivo inválido.');return}
+  const cols=COLS.filter(c=>c!=='diretoria'&&Array.isArray(data[c]));const n=cols.reduce((s,c)=>s+data[c].length,0);if(!n){toast('Nada para importar nesse arquivo.');return}
+  confirmDel('Importar '+n+' registros? Itens com o mesmo id serão substituídos; o resto fica como está.',async()=>{for(const c of cols){for(const d of data[c]){if(!d||typeof d!=='object'||!d.id)continue;const id=String(d.id).replace(/\//g,'_');const o={...d};delete o.id;await db.collection(c).doc(id).set(o)}}toast('Importação concluída')});e.target.value=''});
+view.addEventListener('submit',async e=>{if(e.target.id!=='addm')return;e.preventDefault();const n=$('#m-nome').value.trim();if(!n)return;if(S.membros.some(m=>m.nome.toLowerCase()===n.toLowerCase())){toast('Esse nome já está na lista.');return}await save('membros',uid(),{nome:n,categoria:$('#m-cat').value,ativo:true});toast(n+' adicionado(a)');setTimeout(()=>{const i=$('#m-nome');i&&i.focus()},100)});
+
+/* ---------- conexão ---------- */
+function setSync(t){$('#sync').textContent=t}
+let CREATING=false;
+const isIOSApp=()=>navigator.standalone===true||((window.matchMedia&&matchMedia('(display-mode: standalone)').matches)&&/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document);
+function loginScreen(msg,ok){
+  document.body.classList.remove('ro');$('#tabs').style.display='none';$('#who').textContent='';setSync('');$('#note').innerHTML='';
+  const ios=isIOSApp();
+  const google=`<button class="btn pri" id="login" style="min-height:48px;padding:0 22px;width:100%">Entrar com Google</button>`;
+  const form=`<form id="pwform" style="display:grid;gap:10px;width:100%;text-align:left" novalidate>
+    <label class="f">E-mail<input type="email" id="pw-mail" autocomplete="username" inputmode="email" placeholder="seu e-mail cadastrado na SdD"></label>
+    <label class="f">Senha<input type="password" id="pw-pass" autocomplete="current-password" placeholder="mínimo 6 caracteres"></label>
+    <button class="btn ${ios?'pri':''}" id="pw-in" style="min-height:46px">Entrar com e-mail e senha</button>
+    <button type="button" class="btn ghost" id="pw-new" style="min-height:40px">Primeiro acesso ou esqueci a senha</button></form>`;
+  view.innerHTML=`<div style="max-width:400px;margin:5vh auto;text-align:center;display:grid;gap:16px;justify-items:center"><h2 style="font-family:var(--serif);font-size:30px;margin:0">Painel da SdDUFC</h2>
+  <p class="muted" style="margin:0">${ios?'No app do iPhone, entre com o seu e-mail e uma senha.':'Entre com a sua conta Google ou com e-mail e senha.'}</p>
+  ${msg?`<div class="banner" style="margin:0;text-align:left;${ok?'background:color-mix(in srgb,var(--ok) 14%,var(--bg));border-color:color-mix(in srgb,var(--ok) 40%,var(--bg))':''}">${esc(msg)}</div>`:''}
+  ${ios?form:google+'<div class="muted" style="font-size:14px">ou</div>'+form}
+  ${ios?'<p class="muted" style="font-size:13px;margin:0">O login com Google não funciona em apps da tela inicial do iPhone. Prefere Google? Abra o site direto no Safari.</p>':''}</div>`;
+  const A=firebase.auth();
+  const g=$('#login');if(g)g.onclick=async()=>{const prov=new firebase.auth.GoogleAuthProvider();prov.setCustomParameters({prompt:'select_account'});
+    try{await A.signInWithPopup(prov)}catch(err){if(err&&['auth/popup-blocked','auth/operation-not-supported-in-this-environment','auth/web-storage-unsupported'].includes(err.code)){A.signInWithRedirect(prov)}else if(err&&err.code!=='auth/popup-closed-by-user'&&err.code!=='auth/cancelled-popup-request'){loginScreen('Não foi possível entrar: '+(err.message||err.code))}}};
+  const mail=()=>($('#pw-mail').value||'').trim().toLowerCase(),pass=()=>$('#pw-pass').value||'';
+  $('#pwform').onsubmit=async e=>{e.preventDefault();const m=mail(),p=pass();if(!okMail(m)||!p){loginScreen('Preencha e-mail e senha.');return}
+    try{await A.signInWithEmailAndPassword(m,p)}catch(err){const c=err&&err.code;
+      loginScreen(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-login-credentials'].includes(c)?'E-mail ou senha incorretos. Se é seu primeiro acesso, toque em "Primeiro acesso ou esqueci a senha".':c==='auth/too-many-requests'?'Muitas tentativas. Espere alguns minutos e tente de novo.':c==='auth/operation-not-allowed'?'O login por e-mail ainda não foi ativado no Firebase. Avise a diretoria.':'Não foi possível entrar: '+(err.message||c));const i=$('#pw-mail');if(i)i.value=m}};
+  $('#pw-new').onclick=async()=>{const m=mail(),p=pass();if(!okMail(m)){loginScreen('Digite o seu e-mail no campo acima e toque de novo.');return}
+    if(p.length>=6){CREATING=true;try{const cred=await A.createUserWithEmailAndPassword(m,p);await cred.user.sendEmailVerification();await A.signOut();CREATING=false;loginScreen('Conta criada. Enviamos um link de confirmação para '+m+'. Abra o e-mail, toque no link e depois volte aqui para entrar com a senha que você escolheu.',true);return}
+      catch(err){CREATING=false;if(!(err&&err.code==='auth/email-already-in-use')){loginScreen(err&&err.code==='auth/operation-not-allowed'?'O login por e-mail ainda não foi ativado no Firebase. Avise a diretoria.':'Não foi possível criar a senha: '+(err.message||err.code));return}}}
+    try{await A.sendPasswordResetEmail(m);loginScreen('Enviamos para '+m+' um link para criar ou trocar a senha. Abra o e-mail, defina a senha e volte aqui para entrar. Olhe também o spam.',true)}
+    catch(err){loginScreen(p.length<6?'Para o primeiro acesso, digite também a senha que você quer usar (mínimo 6 caracteres) e toque de novo.':'Não foi possível enviar o e-mail: '+(err.message||err.code))}};
+}
+let UNSUB=[];
+async function boot(){
+  const cfg=window.SDD_CONFIG&&window.SDD_CONFIG.firebase;
+  if(!window.firebase||!cfg||!cfg.apiKey||/COLE/.test(cfg.apiKey)){$('#tabs').style.display='none';view.innerHTML='<div class="empty" style="margin-top:40px">O Firebase ainda não foi configurado. Preencha o arquivo firebase-config.js seguindo o LEIAME.</div>';setSync('');return}
+  firebase.initializeApp(cfg);db=firebase.firestore();try{firebase.auth().getRedirectResult().catch(err=>{if(err&&err.code)loginScreen('Não foi possível entrar: '+(err.message||err.code))})}catch(e){}
+  firebase.auth().onAuthStateChanged(async user=>{
+    UNSUB.forEach(f=>{try{f()}catch(e){}});UNSUB=[];COLS.forEach(c=>S[c]=[]);MYAREA=undefined;RO=false;CANEDIT=false;ADMIN=false;
+    if(!user){loginScreen();return}
+    if(!user.emailVerified){if(CREATING)return;try{await user.sendEmailVerification()}catch(e){}const em=user.email;await firebase.auth().signOut();loginScreen('Falta confirmar o e-mail '+em+'. Mandamos um link de confirmação agora: abra o e-mail, toque no link e depois entre de novo.',true);return}
+    ME=(user.email||'').toLowerCase();
+    $('#tabs').style.display='';$('#who').innerHTML='';const out=document.createElement('button');out.className='btn sm ghost';out.style.color='#e9e6df';out.textContent='Sair ('+ME+')';out.onclick=()=>firebase.auth().signOut();$('#who').appendChild(out);
+    let admin=ADMIN_EMAILS.includes(ME);
+    if(!admin){try{admin=(await db.collection('diretoria').doc(ME).get()).exists}catch(e){admin=false}}
+    let member=false;
+    if(!admin){try{member=(await db.collection('acesso').doc(ME).get()).exists}catch(e){member=false}}
+    ADMIN=admin;CANEDIT=admin;RO=false;document.body.classList.remove('ro');document.body.classList.toggle('member',!admin);$('#note').innerHTML='';
+    if(!admin&&!member){$('#tabs').style.display='none';setSync('');view.innerHTML=`<div class="vh"><div><h2>Acesso ainda não liberado</h2><p>Peça à diretoria para cadastrar o e-mail ${esc(ME)} no seu nome, na aba Membros. Depois é só recarregar esta página.</p></div></div>`;return}
+    render(true);
+    const cols=admin?COLS:MCOLS;
+    let got=0;const timer=setTimeout(()=>{if(got<cols.length)setSync('Sem resposta do servidor ainda…')},10000);
+    cols.forEach(c=>{let first=true;UNSUB.push(db.collection(c).onSnapshot(s=>{S[c]=s.docs.map(x=>({...x.data(),id:x.id}));if(first&&!s.metadata.fromCache){first=false;got++;if(got===cols.length){clearTimeout(timer);setSync('Sincronizado')}}render();if(admin&&got===cols.length)scheduleSync()},err=>{clearTimeout(timer);setSync(err&&err.code==='permission-denied'?'Sem permissão':'Conexão perdida')}))});
+  });
+}
+boot();
+if('serviceWorker' in navigator&&location.protocol==='https:'){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+}
+</script>
+</body>
+</html>
