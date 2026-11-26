@@ -278,6 +278,7 @@ body.ro .chk{pointer-events:none}
       <a href="#acompanhamento">Acompanhamento</a>
       <a href="#tabbys">Tabbys</a>
       <a href="#desempenho">Desempenho</a>
+      <a href="#resultados">Resultados</a>
       <a href="#membros">Membros</a>
     </nav>
   </div>
@@ -309,7 +310,7 @@ const MCOLS=['membros','demandas','eventos','campeonatos','registros','tabbys'];
 const S={};COLS.forEach(c=>S[c]=[]);
 const view=$('#view');
 let db=null,pending=false,modalOpen=false,RO=false,ADMIN=false;
-const ui={eu:'',dir:'todas',busca:'',calY:new Date().getFullYear(),calM:new Date().getMonth(),calMode:'mes',showFim:false,per:'ano',ctx:'todos',cat:'todos',sort:'pts'};
+const ui={resCamp:'',eu:'',dir:'todas',busca:'',calY:new Date().getFullYear(),calM:new Date().getMonth(),calMode:'mes',showFim:false,per:'ano',ctx:'todos',cat:'todos',sort:'pts'};
 
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2600)}
 function fail(e){const c=e&&e.code;toast(c==='permission-denied'?'Sem permissão: só a diretoria edita.':c==='resource-exhausted'?'Limite do plano gratuito atingido hoje.':c==='quota_exceeded'?'Limite de armazenamento atingido.':'Não foi possível salvar. Tente de novo.')}
@@ -491,13 +492,13 @@ function vDesempenho(){
 }
 function salaForm(){
   if(!S.membros.length){toast('Cadastre os membros primeiro.');location.hash='membros';return}
-  openModal('Registrar sala',`<div class="fg"><label class="f">Data<input type="date" name="data" id="s-dt" value="${TODAY}"></label><label class="f">Contexto<select name="contexto" id="s-ctx">${Object.entries(CTX).map(([k,v])=>opt(k,v,'treino')).join('')}</select></label><label class="f full">Evento ou moção (opcional)<input name="evento" id="s-ev" placeholder="Ex.: Treino de quarta · EC que..."></label></div>
+  openModal('Registrar sala',`<div class="fg"><label class="f">Data<input type="date" name="data" id="s-dt" value="${TODAY}"></label><label class="f">Contexto<select name="contexto" id="s-ctx">${Object.entries(CTX).map(([k,v])=>opt(k,v,'treino')).join('')}</select></label><label class="f full">Campeonato (se a sala foi num campeonato)<select name="campeonatoId" id="s-camp">${opt('','Nenhum (treino ou interno)','')}${S.campeonatos.filter(c=>c.nome&&c.status!=='nao').sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||'')).map(c=>opt(c.id,c.nome+(c.inicio?' ('+fmt(c.inicio)+')':''),'')).join('')}</select></label><label class="f full">Rodada, evento ou moção (opcional)<input name="evento" id="s-ev" placeholder="Ex.: Rodada 3 · EC que..."></label></div>
   <p class="muted" style="font-size:14px;margin:16px 0 8px">Preencha só as casas que tiveram membros da SdD. Speaks são opcionais.</p>
   ${CASAS.map(c=>`<div class="casa"><b>${c}</b><select class="cl" name="col_${c}" id="s-col-${c}" aria-label="Colocação ${c}">${opt('','Coloc.','')}${[1,2,3,4].map(n=>opt(n,n+'º','')).join('')}</select><select name="m1_${c}" id="s-m1-${c}" aria-label="${c} debatedor 1">${memOpts('','Debatedor 1')}</select><input type="number" name="s1_${c}" id="s-s1-${c}" placeholder="Speaks" min="50" max="100" step="0.5" aria-label="Speaks"><select name="m2_${c}" id="s-m2-${c}" aria-label="${c} debatedor 2">${memOpts('','Debatedor 2')}</select><input type="number" name="s2_${c}" id="s-s2-${c}" placeholder="Speaks" min="50" max="100" step="0.5" aria-label="Speaks"></div>`).join('')}
   <div class="fg" style="margin-top:10px">${[1,2,3].map(n=>`<label class="f">Juiz ${n}<select name="j${n}" id="s-j${n}">${memOpts('','—')}</select></label>`).join('')}</div>`,acts(false),async f=>{
     const cols=CASAS.map(c=>f['col_'+c]).filter(Boolean);
     if(new Set(cols).size!==cols.length){toast('Duas casas com a mesma colocação.');return false}
-    const salaId=uid(),base={salaId,data:f.data||TODAY,contexto:f.contexto,evento:(f.evento||'').trim()},rows=[];
+    const camp=S.campeonatos.find(x=>x.id===f.campeonatoId);const salaId=uid(),base={salaId,data:f.data||TODAY,contexto:camp?'campeonato':f.contexto,evento:(f.evento||'').trim()||(camp?camp.nome:''),campeonatoId:camp?camp.id:''},rows=[];
     CASAS.forEach(c=>[1,2].forEach(n=>{const m=f[`m${n}_${c}`];if(m)rows.push({...base,membroId:m,funcao:'debatedor',casa:c,colocacao:f['col_'+c]||'',speaks:f[`s${n}_${c}`]||''})}));
     [1,2,3].forEach(n=>{if(f['j'+n])rows.push({...base,membroId:f['j'+n],funcao:'juiz',casa:'',colocacao:'',speaks:''})});
     if(!rows.length){toast('Escolha ao menos um membro.');return false}
@@ -576,6 +577,98 @@ function vAcomp(){
   ${L.length?`<div class="acgrid">${L.map(card).join('')}</div>`:'<div class="empty">Nenhum evento para acompanhar. Adicione campeonatos na aba Campeonatos.</div>'}`;
 }
 
+/* ---------- resultados por campeonato ---------- */
+const FASES=['','Não breakou','Octas','Quartas','Semi','Final','Campeã'];
+const FASE_N={'':-1,'Não breakou':0,'Octas':1,'Quartas':2,'Semi':3,'Final':4,'Campeã':5};
+const norm=t=>String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\(.*?\)/g,' ').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+const resOf=c=>{const r=c.resultado&&typeof c.resultado==='object'?c.resultado:{};return {oradores:Array.isArray(r.oradores)?r.oradores.map(o=>({...o})):[],equipes:Array.isArray(r.equipes)?r.equipes.map(e=>({...e})):[],totalOradores:r.totalOradores||0,totalEquipes:r.totalEquipes||0,filtro:r.filtro||'UFC',importadoEm:r.importadoEm||''}};
+function guessMember(tabName,pool){
+  const n=norm(tabName);if(!n)return '';const toks=n.split(' ');
+  const cands=pool.filter(m=>{const mt=norm(m.nome).split(' ').filter(Boolean);if(!mt.length)return false;return mt.every(t=>toks.includes(t))});
+  if(cands.length===1)return cands[0].id;
+  const byFirst=pool.filter(m=>norm(m.nome).split(' ')[0]===toks[0]);
+  return byFirst.length===1?byFirst[0].id:'';
+}
+function splitCells(line){return (line.includes('\t')?line.split('\t'):line.split(/\s{2,}/)).map(x=>x.trim()).filter(x=>x!=='')}
+const isNum=x=>/^[=]?-?\d+([.,]\d+)?$/.test(String(x).trim());
+const toNum=x=>parseFloat(String(x).replace('=','').replace(',','.'));
+function parseTab(text,filtro,kind){
+  const f=norm(filtro);let maxRank=0;const out=[];
+  String(text||'').split(/\r?\n/).forEach(line=>{
+    const cells=splitCells(line);if(cells.length<2)return;
+    const r=isNum(cells[0])?toNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<2000)maxRank=r;
+    if(f&&!norm(line).includes(f))return;
+    let i=isNaN(r)?0:1;while(i<cells.length&&isNum(cells[i]))i++;
+    const nome=cells[i]||'';if(!/[a-zA-ZÀ-ú]/.test(nome))return;
+    let j=i+1;while(j<cells.length&&isNum(cells[j]))j++;
+    const equipe=j<cells.length&&!isNum(cells[j])?cells[j]:'';
+    const nums=cells.slice(i+1).filter(isNum).map(toNum);
+    if(kind==='oradores'){const sp=nums.filter(x=>x>=50&&x<=100);const media=sp.length?Math.round(sp.reduce((a,b)=>a+b,0)/sp.length*100)/100:null;out.push({nome,equipe,posicao:isNaN(r)?null:r,media,rodadas:Math.max(0,sp.length-(sp.length>2?1:0))})}
+    else{out.push({nome,posicao:isNaN(r)?null:r,pontos:nums.length?nums[0]:null,speaks:nums.length>1?nums[1]:null,fase:''})}
+  });
+  return {rows:out,max:maxRank};
+}
+function importForm(c){
+  const R=resOf(c);const pool=S.membros.filter(m=>m.ativo!==false);
+  openModal('Importar resultado: '+(c.nome||''),`<p class="muted" style="margin:0 0 10px;font-size:14px">No tabby do torneio, abra o <b>Speaker tab</b> (ou "Tab de oradores"), selecione a tabela inteira, copie (Ctrl+C) e cole abaixo. Repita com o <b>Team tab</b>, se ele estiver publicado. O painel acha as linhas da SdD e liga cada orador a um membro.</p>
+  <label class="f">Como a SdD aparece no tab (instituição ou nome das equipes)<input id="im-f" value="${esc(R.filtro)}" placeholder="Ex.: UFC"></label>
+  <label class="f" style="margin-top:10px">Speaker tab (oradores)<textarea id="im-sp" rows="5" placeholder="Cole aqui a tabela de oradores"></textarea></label>
+  <label class="f" style="margin-top:10px">Team tab (equipes), opcional<textarea id="im-tm" rows="4" placeholder="Cole aqui a tabela de equipes"></textarea></label>
+  <button type="button" class="btn" id="im-go" style="margin-top:10px">Ler tabelas</button><div id="im-prev" style="margin-top:12px"></div>`,acts(false),async()=>{
+    if(!importForm.data){toast('Cole as tabelas e toque em "Ler tabelas" primeiro.');return false}
+    const d=importForm.data;d.oradores.forEach((o,i)=>{const s=document.getElementById('im-m-'+i);o.membroId=s?s.value:''});
+    const keep=d.oradores.filter(o=>o.membroId);
+    if(!keep.length&&!d.equipes.length){toast('Nenhum orador ligado a membro.');return false}
+    const old=resOf(c);d.equipes.forEach(e=>{const o=old.equipes.find(x=>norm(x.nome)===norm(e.nome));if(o&&o.fase)e.fase=o.fase});
+    await patch('campeonatos',c.id,{resultado:JSON.parse(JSON.stringify({oradores:keep,equipes:d.equipes,totalOradores:d.totalOradores,totalEquipes:d.totalEquipes,filtro:d.filtro,importadoEm:TODAY}))});importForm.data=null;toast('Resultado importado');ui.resCamp=c.id;location.hash='resultados'});
+  importForm.data=null;
+  $('#im-go').onclick=()=>{
+    const filtro=$('#im-f').value.trim();const sp=parseTab($('#im-sp').value,filtro,'oradores'),tm=parseTab($('#im-tm').value,filtro,'equipes');
+    sp.rows.forEach(o=>{o.membroId=guessMember(o.nome,pool)});
+    importForm.data={oradores:sp.rows,equipes:tm.rows,totalOradores:sp.max,totalEquipes:tm.max,filtro};
+    $('#im-prev').innerHTML=(sp.rows.length?`<b style="font-size:15px">${sp.rows.length} orador(es) encontrados${sp.max?' de '+sp.max:''}</b><div style="overflow-x:auto"><table class="rank"><thead><tr><th>No tab</th><th>Equipe</th><th class="n">Pos.</th><th class="n">Média</th><th>Membro</th></tr></thead><tbody>${sp.rows.map((o,i)=>`<tr><td>${esc(o.nome)}</td><td>${esc(o.equipe)}</td><td class="n">${o.posicao??'–'}</td><td class="n">${f1(o.media)}</td><td><select id="im-m-${i}" style="min-height:34px;font-size:14px">${opt('','Não é membro / ignorar',o.membroId)}${pool.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(m=>opt(m.id,m.nome,o.membroId)).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:'<div class="banner">Nenhum orador da SdD encontrado. Confira se colou a tabela de oradores e se o texto do filtro (ex.: UFC) aparece nas linhas.</div>')
+      +(tm.rows.length?`<p style="margin:10px 0 0;font-size:14px"><b>${tm.rows.length} equipe(s) da SdD</b>${tm.max?' de '+tm.max:''}: ${tm.rows.map(e=>esc(e.nome)+(e.posicao?' ('+e.posicao+'º)':'')).join(', ')}</p>`:'');
+  };
+}
+function campRegs(c){return S.registros.filter(r=>r.campeonatoId===c.id||(r.contexto==='campeonato'&&!r.campeonatoId&&c.nome&&norm(r.evento)===norm(c.nome)))}
+function campSummary(c){
+  const R=resOf(c),regs=campRegs(c).filter(r=>r.funcao==='debatedor');
+  const best=R.equipes.filter(e=>e.posicao).sort((a,b)=>a.posicao-b.posicao)[0];
+  const fase=R.equipes.reduce((m,e)=>FASE_N[e.fase]>FASE_N[m]?e.fase:m,'');
+  const brk=R.equipes.filter(e=>FASE_N[e.fase]>=1).length;
+  const sp=R.oradores.map(o=>o.media).filter(x=>x!=null);const spR=regs.map(r=>Number(r.speaks)).filter(x=>x>0);
+  const media=sp.length?avg(sp):spR.length?avg(spR):null;
+  const bestSp=R.oradores.filter(o=>o.posicao).sort((a,b)=>a.posicao-b.posicao)[0];
+  const duplas=R.equipes.length||new Set(regs.map(r=>r.salaId+'|'+r.casa)).size&&Math.round(new Set(regs.map(r=>r.membroId)).size/2);
+  return {R,regs,best,fase,brk,media,bestSp,duplas,tem:R.oradores.length||R.equipes.length||regs.length};
+}
+function vResultados(){
+  const L=S.campeonatos.filter(c=>c.nome&&c.status!=='nao'&&(c.status==='fim'||(c.inicio&&c.inicio<=TODAY)||resOf(c).oradores.length||campRegs(c).length)).sort((a,b)=>(b.inicio||'').localeCompare(a.inicio||''));
+  const sel=L.find(c=>c.id===ui.resCamp);
+  if(sel)return resDetail(sel);
+  const rows=L.map(c=>{const s=campSummary(c);return `<tr data-id="${esc(c.id)}"><td><button class="ttl" data-act="res-open">${esc(c.nome)}</button><div class="muted" style="font-size:13px">${c.inicio?esc(fmtY(c.inicio)):''}${c.cidade?' · '+esc(c.cidade):''}</div></td><td class="n">${s.duplas||'–'}</td><td class="n">${s.best?esc(s.best.posicao)+'º'+(s.R.totalEquipes?' / '+s.R.totalEquipes:''):'–'}</td><td>${s.fase&&s.fase!=='Não breakou'?esc(s.fase)+(s.brk>1?' ('+s.brk+' equipes)':''):s.fase?'Não breakou':'–'}</td><td class="n">${f1(s.media)}</td><td class="hide-s">${s.bestSp?esc(mname(s.bestSp.membroId))+' ('+esc(s.bestSp.posicao)+'º)':'–'}</td><td class="n hide-s">${s.tem?(s.R.importadoEm?'tab':'salas'):'<span class="muted">sem dados</span>'}</td></tr>`}).join('');
+  const comp=L.map(c=>({c,s:campSummary(c)})).filter(x=>x.s.media!=null).reverse();
+  const mx=Math.max(80,...comp.map(x=>x.s.media)),mn=Math.min(70,...comp.map(x=>x.s.media));
+  return `<div class="vh"><div><h2>Resultados por campeonato</h2><p>Como a delegação foi em cada torneio. Importe direto do tabby ou use as salas registradas com o campeonato.</p></div></div>
+  ${comp.length>1?`<div class="panel" style="margin-bottom:20px"><h3>Speaks médios da delegação por campeonato</h3><p class="cap">Do mais antigo ao mais recente</p>${comp.map(x=>`<div class="hb" style="grid-template-columns:minmax(6em,12em) minmax(0,1fr) 3.4em"><b style="text-align:left;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.c.nome)}</b><div class="tr"><i style="width:${Math.max(4,(x.s.media-mn+1)/(mx-mn+1)*100)}%"></i></div><b>${f1(x.s.media)}</b></div>`).join('')}</div>`:''}
+  ${L.length?`<div class="panel"><div style="overflow-x:auto"><table class="rank"><thead><tr><th>Campeonato</th><th class="n">Duplas</th><th class="n">Melhor equipe</th><th>Break</th><th class="n">Speaks</th><th class="hide-s">Melhor orador</th><th class="n hide-s">Fonte</th></tr></thead><tbody>${rows}</tbody></table></div></div>`:'<div class="empty">Os campeonatos aparecem aqui depois que acontecem. Cadastre-os na aba Campeonatos.</div>'}`;
+}
+function resDetail(c){
+  const s=campSummary(c),R=s.R;
+  const regsBy={};s.regs.forEach(r=>{(regsBy[r.membroId]=regsBy[r.membroId]||[]).push(r)});
+  const salas=new Set(s.regs.map(r=>r.salaId)).size;
+  const membros=[...new Set([...R.oradores.map(o=>o.membroId),...Object.keys(regsBy)])].filter(Boolean);
+  const linhas=membros.map(id=>{const o=R.oradores.find(x=>x.membroId===id)||{};const rg=regsBy[id]||[];const p=rg.map(ptsOf).filter(x=>x!=null);
+    return {id,nome:mname(id),equipe:o.equipe||'',pos:o.posicao||null,media:o.media??avg(rg.map(r=>Number(r.speaks)).filter(x=>x>0)),rod:o.rodadas||rg.length||null,pts:avg(p),pri:rg.filter(r=>Number(r.colocacao)===1).length}}).sort((a,b)=>(a.pos||9999)-(b.pos||9999)||(b.media||0)-(a.media||0));
+  const casa=CASAS.map(cs=>{const t={};s.regs.filter(r=>r.casa===cs&&r.colocacao).forEach(r=>t[r.salaId]=ptsOf(r));const v=Object.values(t);return [cs,avg(v),v.length]});
+  return `<div class="vh"><div><button class="btn sm ghost" data-act="res-back">‹ Todos os campeonatos</button><h2 style="margin-top:6px">${esc(c.nome)}</h2><p>${c.inicio?esc(fmtY(c.inicio)):''}${c.cidade?' · '+esc(c.cidade):''}${R.importadoEm?' · tab importado em '+esc(fmt(R.importadoEm)):''}</p></div><button class="btn pri" data-act="res-import">${R.importadoEm?'Reimportar do tabby':'Importar do tabby'}</button></div>
+  <div class="sumrow"><div class="stat"><strong>${s.duplas||'–'}</strong><span>duplas da SdD</span></div><div class="stat"><strong>${s.best?esc(s.best.posicao)+'º':'–'}</strong><span>melhor equipe${R.totalEquipes?' de '+R.totalEquipes:''}</span></div><div class="stat"><strong>${s.bestSp?esc(s.bestSp.posicao)+'º':'–'}</strong><span>melhor orador${R.totalOradores?' de '+R.totalOradores:''}</span></div><div class="stat"><strong>${f1(s.media)}</strong><span>speaks médios da delegação</span></div></div>
+  ${R.equipes.length?`<div class="panel" style="margin-bottom:20px"><h3>Equipes</h3><p class="cap">Marque até onde cada equipe chegou no break</p><div style="overflow-x:auto"><table class="rank"><thead><tr><th>Equipe</th><th class="n">Posição</th><th class="n">Pontos</th><th class="n">Speaks</th><th>Break</th></tr></thead><tbody>${R.equipes.map((e,i)=>`<tr><td>${esc(e.nome)}</td><td class="n">${e.posicao?esc(e.posicao)+'º':'–'}</td><td class="n">${e.pontos??'–'}</td><td class="n">${e.speaks??'–'}</td><td><select data-fase="${i}" style="min-height:34px;font-size:14px">${FASES.map(fz=>opt(fz,fz||'—',e.fase||'')).join('')}</select></td></tr>`).join('')}</tbody></table></div></div>`:''}
+  <div class="grid2"><div class="panel"><h3>Oradores da SdD</h3><p class="cap">${R.oradores.length?'Do tab do torneio'+(s.regs.length?' e das salas registradas':''):'Das salas registradas'}</p>
+  ${linhas.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th>Membro</th><th class="n">Pos.</th><th class="n">Média</th><th class="n">Rodadas</th>${s.regs.length?'<th class="n">Pts/sala</th>':''}</tr></thead><tbody>${linhas.map(l=>`<tr><td>${esc(l.nome)}${l.equipe?`<div class="muted" style="font-size:12.5px">${esc(l.equipe)}</div>`:''}</td><td class="n">${l.pos?esc(l.pos)+'º':'–'}</td><td class="n">${f1(l.media)}</td><td class="n">${l.rod??'–'}</td>${s.regs.length?`<td class="n">${f1(l.pts)}</td>`:''}</tr>`).join('')}</tbody></table></div>`:'<div class="empty">Sem dados ainda. Importe o tab do torneio, ou registre as salas na aba Desempenho escolhendo este campeonato.</div>'}</div>
+  <div class="panel"><h3>Por casa</h3><p class="cap">${salas?'Pontos médios por posição, nas '+salas+' salas registradas':'Registre as salas deste campeonato na aba Desempenho para ver o rendimento por casa'}</p>${salas?casa.map(([cs,v,n])=>`<div class="hb"><b style="text-align:left">${cs}</b><div class="tr"><i style="width:${v==null?0:v/3*100}%"></i></div><b>${f1(v)}</b></div>`).join(''):''}</div></div>`;
+}
+
 /* ---------- minha área ---------- */
 const lsGet=k=>{try{return localStorage.getItem(k)||''}catch(e){return ''}};
 const lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
@@ -584,7 +677,7 @@ function buildResumo(id){
   const mine=S.registros.filter(r=>r.membroId===id),d=mine.filter(r=>r.funcao==='debatedor');
   const ano=new Date().getFullYear()+'-01-01',first=m.nome.split(' ')[0].toLowerCase();
   const dem=S.demandas.filter(x=>x.status!=='concluida'&&x.responsavel&&x.responsavel.toLowerCase().split(/\s*(?:,|\/|&|\se\s)\s*/).some(n=>n.trim()===m.nome.toLowerCase()||n.trim()===first)).sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999')).map(x=>({titulo:x.titulo||'',diretoria:x.diretoria||'',prazo:x.prazo||'',status:x.status||''}));
-  const camps=S.campeonatos.filter(c=>Array.isArray(c.equipe)&&c.equipe.some(x=>x.membroId===id)&&c.status!=='nao').sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999')).map(c=>({nome:c.nome||'',inicio:c.inicio||'',fim:c.fim||'',cidade:c.cidade||'',funcao:c.equipe.filter(x=>x.membroId===id).map(x=>x.funcao).filter(Boolean).join(', ')}));
+  const camps=S.campeonatos.filter(c=>((Array.isArray(c.equipe)&&c.equipe.some(x=>x.membroId===id))||resOf(c).oradores.some(x=>x.membroId===id))&&c.status!=='nao').sort((a,b)=>(a.inicio||'9999').localeCompare(b.inicio||'9999')).map(c=>{const o=resOf(c).oradores.find(x=>x.membroId===id);const tot=resOf(c).totalOradores;return {nome:c.nome||'',inicio:c.inicio||'',fim:c.fim||'',cidade:c.cidade||'',funcao:(Array.isArray(c.equipe)?c.equipe:[]).filter(x=>x.membroId===id).map(x=>x.funcao).filter(Boolean).join(', ')||(o?'Debatedor(a)':''),res:o?(o.posicao?o.posicao+'º orador'+(tot?' de '+tot:''):'')+(o.media!=null?(o.posicao?', ':'')+'média '+String(o.media).replace('.',','):''):''}});
   const r1=v=>v==null?null:Math.round(v*10)/10;
   return {nome:m.nome,categoria:m.categoria,
     stats:{deb:d.length,dAno:d.filter(r=>r.data>=ano).length,pts:r1(avg(d.map(ptsOf).filter(x=>x!=null))),spk:r1(avg(d.map(r=>Number(r.speaks)).filter(x=>x>0))),last:mine.reduce((a,r)=>r.data>a?r.data:a,'')},
@@ -600,7 +693,7 @@ function areaHtml(R,pick){
   const s=R.stats,last=s.last;
   return `<div class="vh"><div><h2>Olá, ${esc(R.nome.split(' ')[0])}</h2><p>${R.categoria==='aspira'?'Aspira':'Efetivo(a)'} da SdDUFC${R.diretoria?' · Diretoria '+esc(DIR[R.diretoria]||''):''}</p></div>${pick||''}</div>
   <div class="sumrow"><div class="stat"><strong>${s.deb}</strong><span>debates registrados (${s.dAno} este ano)</span></div><div class="stat"><strong>${f1(s.pts)}</strong><span>pontos médios por sala</span></div><div class="stat"><strong>${f1(s.spk)}</strong><span>speaks médio</span></div><div class="stat"><strong style="${!last||dias(last,TODAY)>30?'color:var(--acc)':''}">${last?esc(fmt(last)):'–'}</strong><span>última participação</span></div></div>
-  <div class="grid2"><div class="panel"><h3>Meus campeonatos</h3><p class="cap">Onde você está na equipe da SdD</p>${R.camps.length?`<ul class="up">${R.camps.map(c=>`<li><button type="button"><span class="dt">${c.inicio?esc(fmt(c.inicio)):'–'}<small>${c.inicio&&c.inicio>=TODAY?'em '+dias(TODAY,c.inicio)+' d':''}</small></span><span><span class="nm">${esc(c.nome)}</span><span class="sub">${esc(c.funcao||'Função a definir')}${c.cidade?' · '+esc(c.cidade):''}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Você ainda não está em nenhuma equipe.</div>'}</div>
+  <div class="grid2"><div class="panel"><h3>Meus campeonatos</h3><p class="cap">Onde você está na equipe da SdD</p>${R.camps.length?`<ul class="up">${R.camps.map(c=>`<li><button type="button"><span class="dt">${c.inicio?esc(fmt(c.inicio)):'–'}<small>${c.inicio&&c.inicio>=TODAY?'em '+dias(TODAY,c.inicio)+' d':''}</small></span><span><span class="nm">${esc(c.nome)}</span><span class="sub">${esc(c.funcao||'Função a definir')}${c.cidade?' · '+esc(c.cidade):''}${c.res?' · <b>'+esc(c.res)+'</b>':''}</span></span></button></li>`).join('')}</ul>`:'<div class="empty">Você ainda não está em nenhuma equipe.</div>'}</div>
   <div class="panel"><h3>Minhas demandas</h3><p class="cap">Pendências em que você é responsável</p>${R.demandas.length?`<ul class="tlist">${R.demandas.map(x=>{const late=x.prazo&&x.prazo<TODAY;return `<li class="task d-${esc(x.diretoria)}" style="grid-template-columns:minmax(0,1fr)"><div><b>${esc(x.titulo)}</b><div class="meta"><span class="tag d-${esc(x.diretoria)}">${esc(DIR[x.diretoria]||'')}</span>${x.status==='andamento'?'<span class="prog">em andamento</span>':''}${x.prazo?`<span class="nw ${late?'late':''}">${late?'atrasada · ':'até '}${esc(fmt(x.prazo))}</span>`:''}</div></div></li>`}).join('')}</ul>`:'<div class="empty">Nada pendente com seu nome.</div>'}</div></div>
   <div class="grid2"><div class="panel"><h3>Últimos debates</h3><p class="cap">Casa, colocação e speaks</p>${R.recent.length?`<div style="overflow-x:auto"><table class="rank"><thead><tr><th>Data</th><th>Evento</th><th>Casa</th><th class="n">Coloc.</th><th class="n">Speaks</th></tr></thead><tbody>${R.recent.map(r=>`<tr><td class="nw">${esc(fmt(r.data))}</td><td>${esc(r.evento)}</td><td>${esc(r.casa)}</td><td class="n">${r.colocacao?esc(r.colocacao)+'º':'–'}</td><td class="n">${r.speaks?esc(r.speaks):'–'}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum debate registrado ainda.</div>'}</div>
   <div class="panel"><h3>Meus pontos por casa</h3><p class="cap">Média de pontos por sala em cada posição</p>${(R.casas||[]).map(o=>Array.isArray(o)?{casa:o[0],v:o[1]}:o).map(({casa:c,v})=>`<div class="hb"><b style="text-align:left">${esc(c)}</b><div class="tr"><i style="width:${v==null?0:Math.min(100,v/3*100)}%"></i></div><b>${f1(v)}</b></div>`).join('')}</div></div>
@@ -646,7 +739,7 @@ async function doSync(){
 }
 
 /* ---------- render & eventos ---------- */
-const V={eu:vEu,acompanhamento:vAcomp,demandas:vDemandas,calendario:vCalendario,campeonatos:vCampeonatos,tabbys:vTabbys,desempenho:vDesempenho,membros:vMembros};
+const V={eu:vEu,resultados:vResultados,acompanhamento:vAcomp,demandas:vDemandas,calendario:vCalendario,campeonatos:vCampeonatos,tabbys:vTabbys,desempenho:vDesempenho,membros:vMembros};
 const cur=()=>V[location.hash.slice(1)]?location.hash.slice(1):(ADMIN?'demandas':'eu');
 function render(force){
   const a=document.activeElement;
@@ -673,6 +766,9 @@ view.addEventListener('click',async e=>{
   else if(act==='export'){const out={exportadoEm:TODAY};COLS.filter(c=>c!=='diretoria').forEach(c=>out[c]=S[c]);const blob=new Blob([JSON.stringify(out,null,1)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='sdd-backup-'+TODAY+'.json';document.body.appendChild(a);a.click();a.remove();toast('Backup baixado')}
   else if(act==='del-dir'){confirmDel('Tirar '+id+' da diretoria? A pessoa perde o acesso às abas de gestão.',()=>del('diretoria',id))}
   else if(act==='link'){const m=mem(id);if(m)linkForm(m)}
+  else if(act==='res-open'){ui.resCamp=id;render(true);window.scrollTo(0,0)}
+  else if(act==='res-back'){ui.resCamp='';render(true)}
+  else if(act==='res-import'){const c=S.campeonatos.find(x=>x.id===ui.resCamp);if(c)importForm(c)}
   else if(act==='ac-step'){const c=S.campeonatos.find(x=>x.id===id);if(!c)return;const a=acOf(c),k=b.dataset.k,on=!(a.etapas[k]&&a.etapas[k].ok);a.etapas[k]={ok:on,data:on?TODAY:'',por:ME};await patch('campeonatos',id,{acomp:a})}
   else if(act==='eq'){const c=S.campeonatos.find(x=>x.id===id);if(c)equipeForm(c)}
   else if(act==='edit-tabby'){const t=S.tabbys.find(x=>x.id===id);if(t)tabbyForm(t)}
@@ -698,6 +794,7 @@ function confirmDel(msg,fn){openModal('Confirmar exclusão',`<p style="margin:0"
 view.addEventListener('input',e=>{if(e.target.id==='busca'){ui.busca=e.target.value;const l=$('#dlists');if(l)l.innerHTML=dLists()}});
 view.addEventListener('change',e=>{
   const t=e.target;
+  if(t.dataset.fase!==undefined){const c=S.campeonatos.find(x=>x.id===ui.resCamp);if(c){const r=resOf(c);const e=r.equipes[Number(t.dataset.fase)];if(e){e.fase=t.value;patch('campeonatos',c.id,{resultado:JSON.parse(JSON.stringify({...r}))})}}return}
   if(t.dataset.mydir!==undefined){const me=myMember();if(me){patch('membros',me.id,{diretoria:t.value});toast(t.value?'Diretoria salva: '+DIR[t.value]:'Diretoria removida')}return}
   if(t.dataset.mdir!==undefined){const li=t.closest('[data-id]');if(li&&ADMIN)patch('membros',li.dataset.id,{diretoria:t.value});return}
   if(t.dataset.eu!==undefined){ui.eu=t.value;lsSet('sdd-eu',t.value);render(true);return}
