@@ -591,15 +591,18 @@ function guessMember(tabName,pool){
 }
 function splitCells(line){return (line.includes('\t')?line.split('\t'):line.split(/\s{2,}/)).map(x=>x.trim()).filter(x=>x!=='')}
 const isNum=x=>/^[=]?-?\d+([.,]\d+)?$/.test(String(x).trim());
+const isRank=x=>/^=?\d+\s*[º°ª.=]?$/.test(String(x).trim());
+const rankNum=x=>parseInt(String(x).replace(/\D/g,''),10);
 const toNum=x=>parseFloat(String(x).replace('=','').replace(',','.'));
 function tabRows(text){
   const lines=String(text||'').split(/\r?\n/).map(x=>x.trim());
-  const tabbed=lines.filter(l=>l.includes('\t')||/\S\s{2,}\S/.test(l)).length;
-  if(tabbed>=3)return lines.map(splitCells).filter(c=>c.length>=2);
+  const nonEmpty=lines.filter(l=>l!=='');
+  const tabbed=nonEmpty.filter(l=>l.includes('\t')||/\S\s{2,}\S/.test(l)).length;
+  if(nonEmpty.length&&tabbed/nonEmpty.length>0.4)return lines.map(splitCells).filter(c=>c.length>=2);
   // Formato "uma célula por linha" (copiado do site do Tabbycat no celular ou em alguns navegadores)
   const L=lines.filter(l=>l!=='');const rows=[];let cur=null;
   for(let i=0;i<L.length;i++){const l=L[i],nx=L[i+1]||'';
-    if(/^=?\d+=?$/.test(l)&&/[A-Za-zÀ-ú]/.test(nx)&&!/^novice$/i.test(nx)){if(cur)rows.push(cur);cur=[l.replace(/=/g,'')];continue}
+    if(isRank(l)&&/[A-Za-zÀ-ú]/.test(nx)&&!/^(novice|esl|efl)$/i.test(nx)){if(cur)rows.push(cur);cur=[String(rankNum(l))];continue}
     if(cur){if(/runs on Tabbycat/i.test(l)){rows.push(cur);cur=null;break}cur.push(l)}}
   if(cur)rows.push(cur);return rows;
 }
@@ -607,7 +610,7 @@ function parseTab(text,filtro,kind){
   const f=norm(filtro);let maxRank=0;const out=[];
   tabRows(text).forEach(cells=>{
     const line=cells.join(' ');
-    const r=isNum(cells[0])?toNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<5000)maxRank=r;
+    const r=isRank(cells[0])?rankNum(cells[0]):NaN;if(!isNaN(r)&&r>maxRank&&r<5000)maxRank=r;
     if(f&&!norm(line).includes(f))return;
     let i=isNaN(r)?0:1;while(i<cells.length&&isNum(cells[i]))i++;
     const nome=cells[i]||'';if(!/[a-zA-ZÀ-ú]/.test(nome))return;
@@ -621,7 +624,7 @@ function parseTab(text,filtro,kind){
       out.push({nome,equipe,posicao:isNaN(r)?null:r,media,rodadas:ints.length,novice:/\bnovice\b/i.test(line)});
     }else{out.push({nome,posicao:isNaN(r)?null:r,pontos:nums.length?nums[0]:null,speaks:nums.length>1?nums[1]:null,fase:''})}
   });
-  return {rows:out,max:maxRank};
+  return {rows:out,max:maxRank,lidas:tabRows(text).length};
 }
 function importForm(c){
   const R=resOf(c);const pool=S.membros.filter(m=>m.ativo!==false);
@@ -641,7 +644,7 @@ function importForm(c){
     const filtro=$('#im-f').value.trim();const sp=parseTab($('#im-sp').value,filtro,'oradores'),tm=parseTab($('#im-tm').value,filtro,'equipes');
     sp.rows.forEach(o=>{o.membroId=guessMember(o.nome,pool)});
     importForm.data={oradores:sp.rows,equipes:tm.rows,totalOradores:sp.max,totalEquipes:tm.max,filtro};
-    $('#im-prev').innerHTML=(sp.rows.length?`<b style="font-size:15px">${sp.rows.length} orador(es) encontrados${sp.max?' de '+sp.max:''}</b><div style="overflow-x:auto"><table class="rank"><thead><tr><th>No tab</th><th>Equipe</th><th class="n">Pos.</th><th class="n">Média</th><th>Membro</th></tr></thead><tbody>${sp.rows.map((o,i)=>`<tr><td>${esc(o.nome)}</td><td>${esc(o.equipe)}</td><td class="n">${o.posicao??'–'}</td><td class="n">${f1(o.media)}</td><td><select id="im-m-${i}" style="min-height:34px;font-size:14px">${opt('','Não é membro / ignorar',o.membroId)}${pool.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(m=>opt(m.id,m.nome,o.membroId)).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:'<div class="banner">Nenhum orador da SdD encontrado. Confira se colou a tabela de oradores e se o texto do filtro (ex.: UFC) aparece nas linhas.</div>')
+    $('#im-prev').innerHTML=(sp.rows.length?`<b style="font-size:15px">${sp.rows.length} orador(es) encontrados${sp.max?' de '+sp.max:''}</b><div style="overflow-x:auto"><table class="rank"><thead><tr><th>No tab</th><th>Equipe</th><th class="n">Pos.</th><th class="n">Média</th><th>Membro</th></tr></thead><tbody>${sp.rows.map((o,i)=>`<tr><td>${esc(o.nome)}</td><td>${esc(o.equipe)}</td><td class="n">${o.posicao??'–'}</td><td class="n">${f1(o.media)}</td><td><select id="im-m-${i}" style="min-height:34px;font-size:14px">${opt('','Não é membro / ignorar',o.membroId)}${pool.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(m=>opt(m.id,m.nome,o.membroId)).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:`<div class="banner">Nenhum orador da SdD encontrado. O painel leu ${sp.lidas} linha(s) de oradores no total${sp.lidas?' e nenhuma tinha o texto "'+esc(filtro)+'"':''}. Confira se colou a tabela de oradores e se o filtro está escrito como aparece no tab. (versão 6)</div>`)
       +(tm.rows.length?`<p style="margin:10px 0 0;font-size:14px"><b>${tm.rows.length} equipe(s) da SdD</b>${tm.max?' de '+tm.max:''}: ${tm.rows.map(e=>esc(e.nome)+(e.posicao?' ('+e.posicao+'º)':'')).join(', ')}</p>`:'');
   };
 }
